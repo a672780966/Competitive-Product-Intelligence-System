@@ -1,0 +1,18 @@
+{
+  "name": "cpis-json-gate",
+  "version": "1.1.0",
+  "description": "Hard JSON and routing gate for the CPIS three-agent workflow.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": "./dist/index.js",
+  "files": ["dist", "openclaw.plugin.json"],
+  "scripts": {"test": "node --test test/*.test.js"},
+  "openclaw": {
+    "extensions": ["./dist/index.js"],
+    "compat": {"pluginApi": ">=2026.3.24-beta.2", "minGatewayVersion": "2026.3.24-beta.2"},
+    "build": {"openclawVersion": "2026.6.6", "pluginSdkVersion": "2026.6.6"}
+  },
+  "engines": {"node": ">=22.19.0"},
+  "license": "UNLICENSED",
+  "private": true
+}
