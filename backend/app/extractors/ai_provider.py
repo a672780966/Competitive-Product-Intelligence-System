@@ -8,7 +8,6 @@ Supports OpenAI-compatible APIs (OpenAI, Azure, local models, etc.).
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
 
 import httpx
 

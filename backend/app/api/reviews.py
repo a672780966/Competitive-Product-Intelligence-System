@@ -16,8 +16,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_current_user, require_roles
 from app.core.database import get_db
 from app.models.enums import ReviewStatus
+from app.models.user import User
 from app.schemas.review import (
     ApproveRequest,
     PaginatedReviewResponse,
@@ -33,6 +35,7 @@ router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 
 @router.get("", response_model=PaginatedReviewResponse)
 async def list_reviews(
+    current_user: User = Depends(get_current_user),
     status: ReviewStatus | None = Query(None, alias="status"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -47,6 +50,7 @@ async def list_reviews(
 @router.get("/{version_id}", response_model=ReviewDetailResponse)
 async def get_review_detail(
     version_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ReviewDetailResponse:
     """Get full review detail for a product version (left/right panel data)."""
@@ -61,11 +65,12 @@ async def get_review_detail(
 async def save_draft(
     version_id: uuid.UUID,
     body: SaveDraftRequest,
+    current_user: User = Depends(require_roles("admin", "operator")),
     db: AsyncSession = Depends(get_db),
 ) -> ReviewDetailResponse:
     """Save a review draft without finalizing."""
     service = ReviewService(db)
-    result = await service.save_draft(version_id, body, reviewer="admin")
+    result = await service.save_draft(version_id, body, reviewer=current_user.username)
     if result is None:
         raise HTTPException(status_code=404, detail="Version not found")
     return result
@@ -74,12 +79,13 @@ async def save_draft(
 @router.post("/{version_id}/approve", response_model=ReviewDetailResponse)
 async def approve_version(
     version_id: uuid.UUID,
+    current_user: User = Depends(require_roles("admin", "operator")),
     body: ApproveRequest = ApproveRequest(),
     db: AsyncSession = Depends(get_db),
 ) -> ReviewDetailResponse:
     """Approve a product version — sets current_version and triggers sync."""
     service = ReviewService(db)
-    result = await service.approve(version_id, body, reviewer="admin")
+    result = await service.approve(version_id, body, reviewer=current_user.username)
     if result is None:
         raise HTTPException(status_code=404, detail="Version not found")
     return result
@@ -88,12 +94,13 @@ async def approve_version(
 @router.post("/{version_id}/reject", response_model=ReviewDetailResponse)
 async def reject_version(
     version_id: uuid.UUID,
+    current_user: User = Depends(require_roles("admin", "operator")),
     body: RejectRequest = RejectRequest(),
     db: AsyncSession = Depends(get_db),
 ) -> ReviewDetailResponse:
     """Reject a product version."""
     service = ReviewService(db)
-    result = await service.reject(version_id, body, reviewer="admin")
+    result = await service.reject(version_id, body, reviewer=current_user.username)
     if result is None:
         raise HTTPException(status_code=404, detail="Version not found")
     return result

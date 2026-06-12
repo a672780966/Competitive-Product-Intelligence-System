@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -39,8 +39,8 @@ class ProductVersion(Base):
     )
 
     # relationships
-    product: Mapped["Product"] = relationship(back_populates="versions")
-    evidences: Mapped[list["ProductEvidence"]] = relationship(
+    product: Mapped[Product] = relationship(back_populates="versions")
+    evidences: Mapped[list[ProductEvidence]] = relationship(
         back_populates="product_version", cascade="all, delete-orphan",
     )
 

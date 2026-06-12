@@ -7,8 +7,8 @@ Manages the review lifecycle for product versions.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
+from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -17,13 +17,13 @@ from app.core.logging import get_logger
 from app.models import (
     AuditLog,
     Product,
-    ProductEvidence,
     ProductVersion,
     ReviewRecord,
     SourceSnapshot,
 )
 from app.models.enums import ReviewStatus
 from app.repositories.product_repository import ProductRepository
+from app.schemas.extraction import ProductFactFields
 from app.schemas.review import (
     ApproveRequest,
     EvidenceItem,
@@ -211,10 +211,53 @@ class ReviewService:
     async def approve(
         self, version_id: uuid.UUID, req: ApproveRequest, reviewer: str = "",
     ) -> ReviewDetailResponse | None:
-        """Approve a version: set APPROVED, update product, log audit."""
+        """Approve a version: set APPROVED, update product, log audit.
+
+        Corrections are validated against ProductFactFields and re-assigned
+        (not mutated in-place). Field-level diffs are recorded in the audit log.
+        Returns 409 if the version is already approved or rejected.
+        """
         version = await self._get_version(version_id)
         if version is None:
             return None
+
+        # Check if already finalized
+        product = await self._product_repo.get_by_id(version.product_id)
+        if product:
+            if product.review_status in (
+                ReviewStatus.APPROVED.value,
+                ReviewStatus.REJECTED.value,
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Version is already {product.review_status} — reopen first to modify",
+                )
+
+        # Validate corrections against ProductFactFields
+        field_diffs = {}
+        if req.corrections:
+            allowed_fields = set(ProductFactFields.model_fields.keys())
+            for field_name in req.corrections:
+                if field_name not in allowed_fields:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=f"Field '{field_name}' is not a valid product fact field",
+                    )
+
+            # Compute field-level diffs for audit
+            old_data = version.structured_data or {}
+            for field_name, new_value in req.corrections.items():
+                old_value = old_data.get(field_name)
+                if old_value != new_value:
+                    field_diffs[field_name] = {
+                        "before": old_value,
+                        "after": new_value,
+                    }
+
+            # Re-assign corrections (not in-place mutation)
+            corrected_data = {**old_data, **req.corrections}
+            validated = ProductFactFields.model_validate(corrected_data)
+            version.structured_data = validated.model_dump()
 
         # Save review record
         review = ReviewRecord(
@@ -228,7 +271,6 @@ class ReviewService:
         self._db.add(review)
 
         # Update product status
-        product = await self._product_repo.get_by_id(version.product_id)
         if product:
             await self._product_repo.update_review_status(
                 product.id, ReviewStatus.APPROVED,
@@ -238,20 +280,20 @@ class ReviewService:
                 product.id, version_id,
             )
 
-        # Apply corrections to structured_data if provided
-        if req.corrections and version.structured_data:
-            version.structured_data.update(req.corrections)
+        # Audit log with structured diffs
+        audit_detail: dict = {
+            "product_id": str(version.product_id),
+            "version_no": version.version_no,
+        }
+        if field_diffs:
+            audit_detail["field_diffs"] = field_diffs
 
-        # Audit log
         audit = AuditLog(
             actor=reviewer or "unknown",
             action="review.approve",
             resource_type="product_version",
             resource_id=str(version_id),
-            detail=str({
-                "product_id": str(version.product_id),
-                "version_no": version.version_no,
-            }),
+            detail=audit_detail,
         )
         self._db.add(audit)
         await self._db.flush()
@@ -267,6 +309,17 @@ class ReviewService:
         if version is None:
             return None
 
+        # Check if already finalized
+        product = await self._product_repo.get_by_id(version.product_id)
+        if product and product.review_status in (
+            ReviewStatus.APPROVED.value,
+            ReviewStatus.REJECTED.value,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Version is already {product.review_status} — reopen first to modify",
+            )
+
         review = ReviewRecord(
             product_version_id=version_id,
             reviewer=reviewer or "unknown",
@@ -275,7 +328,6 @@ class ReviewService:
         )
         self._db.add(review)
 
-        product = await self._product_repo.get_by_id(version.product_id)
         if product:
             await self._product_repo.update_review_status(
                 product.id, ReviewStatus.REJECTED,
@@ -286,11 +338,11 @@ class ReviewService:
             action="review.reject",
             resource_type="product_version",
             resource_id=str(version_id),
-            detail=str({
+            detail={
                 "product_id": str(version.product_id),
                 "version_no": version.version_no,
                 "reason": req.comments,
-            }),
+            },
         )
         self._db.add(audit)
         await self._db.flush()

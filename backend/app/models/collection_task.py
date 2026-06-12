@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -43,10 +43,10 @@ class CollectionTask(Base, TimestampMixin):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # relationships
-    events: Mapped[list["TaskEvent"]] = relationship(
+    events: Mapped[list[TaskEvent]] = relationship(
         back_populates="task", cascade="all, delete-orphan",
     )
-    snapshot: Mapped["SourceSnapshot | None"] = relationship(
+    snapshot: Mapped[SourceSnapshot | None] = relationship(
         back_populates="task", cascade="all, delete-orphan", uselist=False,
     )
 

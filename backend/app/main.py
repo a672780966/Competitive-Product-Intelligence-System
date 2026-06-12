@@ -8,8 +8,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router as health_router
+from app.api.auth import router as auth_router
+from app.api.products import router as products_router
 from app.api.reports import router as reports_router
 from app.api.reviews import router as reviews_router
+from app.api.sync_records import router as sync_records_router
 from app.api.tasks import router as tasks_router
 from app.core import get_settings
 from app.core.exceptions import register_exception_handlers
@@ -42,7 +45,7 @@ def create_app() -> FastAPI:
     # --- Middleware ---
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -55,9 +58,12 @@ def create_app() -> FastAPI:
 
     # --- Routers ---
     app.include_router(health_router, prefix="/health")
+    app.include_router(auth_router)
     app.include_router(tasks_router)
     app.include_router(reviews_router)
+    app.include_router(products_router)
     app.include_router(reports_router)
+    app.include_router(sync_records_router)
 
     @app.get("/")
     async def root() -> dict[str, str]:

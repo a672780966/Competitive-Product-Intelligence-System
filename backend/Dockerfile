@@ -21,7 +21,7 @@ RUN poetry config virtualenvs.create false && \
 COPY . .
 
 # Install Playwright browsers (headless Chromium)
-RUN playwright install --with-deps chromium 2>/dev/null || true
+RUN playwright install --with-deps chromium
 
 # ── Production image ─────────────────────────────────────────────
 FROM python:3.12-slim AS production
@@ -50,4 +50,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
   CMD python -c "import httpx; httpx.get('http://localhost:8000/health/live', timeout=5)" || exit 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN chmod +x start.sh
+CMD ["./start.sh"]

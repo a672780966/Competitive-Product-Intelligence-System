@@ -1,6 +1,7 @@
 """CPIS V1 — TypeScript type definitions for the admin frontend."""
 
 from __future__ import annotations
+
 """
 Note: This is a Python file that generates types.ts content.
 Run: python backend/app/frontend_types.py

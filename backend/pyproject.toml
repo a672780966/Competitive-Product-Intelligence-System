@@ -31,6 +31,8 @@ dependencies = [
     "python-multipart>=0.0,<1",
     "tenacity>=9,<10",
     "greenlet>=3,<4",
+    "passlib[bcrypt]>=1.7,<2",
+    "pyjwt>=2,<3",
 ]
 
 [project.optional-dependencies]
@@ -71,3 +73,4 @@ minversion = "8.0"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
+addopts = "--cov=app --cov-report=term-missing --cov-fail-under=70"

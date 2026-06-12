@@ -32,7 +32,7 @@ class ProductEvidence(Base):
     )
 
     # relationships
-    product_version: Mapped["ProductVersion"] = relationship(back_populates="evidences")
+    product_version: Mapped[ProductVersion] = relationship(back_populates="evidences")
 
     def __repr__(self) -> str:
         return f"<ProductEvidence {self.field_name}={self.value}>"

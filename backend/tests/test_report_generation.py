@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.analyzers.report_generator import (
-    generate_single_product_report,
     generate_comparison_report,
+    generate_single_product_report,
 )
 from app.models import Base, Product, ProductVersion
 

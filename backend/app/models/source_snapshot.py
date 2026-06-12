@@ -33,7 +33,7 @@ class SourceSnapshot(Base):
     )
 
     # relationships
-    task: Mapped["CollectionTask"] = relationship(back_populates="snapshot")
+    task: Mapped[CollectionTask] = relationship(back_populates="snapshot")
 
     def __repr__(self) -> str:
         return f"<SourceSnapshot {self.id} task={self.task_id}>"

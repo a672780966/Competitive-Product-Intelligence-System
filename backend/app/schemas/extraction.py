@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-
 # ── Factual fields (extracted from page content) ────────────────
 
 

@@ -16,6 +16,7 @@ from playwright.async_api import async_playwright
 from app.collectors.base import BaseCollector, CollectResult, FetchErrorCode
 from app.core import get_settings
 from app.core.logging import get_logger
+from app.security.safe_url import check_url_safe
 
 logger = get_logger(__name__)
 
@@ -91,6 +92,21 @@ class PlaywrightCollector(BaseCollector):
                 ) as context:
                     # ✅ async with 确保 page 自动关闭
                     async with await context.new_page() as page:
+                        # ── SSRF protection: intercept all sub-resources ──
+                        async def _intercept_request(route):
+                            url = route.request.url
+                            result = await check_url_safe(url)
+                            if result.safe:
+                                await route.continue_()
+                            else:
+                                logger.warning(
+                                    "playwright_ssrf_blocked",
+                                    url=url,
+                                )
+                                await route.abort()
+
+                        await page.route("**/*", _intercept_request)
+
                         try:
                             response = await page.goto(
                                 url,
@@ -150,7 +166,7 @@ class PlaywrightCollector(BaseCollector):
                                 content_hash=content_hash,
                             )
 
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             logger.warning(
                                 "playwright_timeout",
                                 url=url,

@@ -70,7 +70,7 @@ def build_feishu_record(
         "分析摘要": ad.get("analysis_summary") or "",
         "数据版本": f"v{version_no}",
         # ✅ 修复 #10：传入正确的采集时间
-        "最后采集时间": collected_at.isoformat() if collected_at else "",
+        "最后采集时间": collected_at.isoformat() if isinstance(collected_at, datetime) else (collected_at or ""),
     }
 
 

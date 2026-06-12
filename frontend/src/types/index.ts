@@ -59,6 +59,82 @@ export interface ProductSummary {
   model: string | null;
 }
 
+export interface ProductItem {
+  id: string;
+  unique_key: string;
+  brand: string | null;
+  name: string | null;
+  model: string | null;
+  category: string | null;
+  source_url: string | null;
+  review_status: string;
+  current_version_id: string | null;
+  feishu_record_id: string | null;
+  overall_confidence: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductListResponse {
+  items: ProductItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface ProductVersionItem {
+  id: string;
+  version_no: number;
+  structured_data: Record<string, unknown>;
+  analysis_data: Record<string, unknown>;
+  ai_model: string | null;
+  prompt_version: string | null;
+  overall_confidence: number | null;
+  created_at: string;
+}
+
+export interface SyncRecordItem {
+  id: string;
+  product_id: string;
+  sync_status: string;
+  sync_type: string;
+  feishu_record_id: string | null;
+  error_message: string | null;
+  retry_count: number;
+  created_at: string;
+  synced_at: string | null;
+  product_brand?: string | null;
+  product_name?: string | null;
+}
+
+export interface SyncRecordListResponse {
+  items: SyncRecordItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface ProductDetail {
+  id: string;
+  unique_key: string;
+  brand: string | null;
+  name: string | null;
+  model: string | null;
+  category: string | null;
+  source_url: string | null;
+  review_status: string;
+  feishu_record_id: string | null;
+  created_at: string;
+  updated_at: string;
+  current_version: ProductVersionItem | null;
+  evidences: EvidenceItem[];
+  versions: ProductVersionItem[];
+  latest_review: Record<string, unknown> | null;
+  latest_sync: SyncRecordItem | null;
+}
+
 // ── Review ──────────────────────────────────────────────────────
 export interface ReviewItem {
   product_version_id: string;

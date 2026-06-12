@@ -2,7 +2,7 @@
 CPIS V1 — HttpxCollector: static HTML fetcher.
 
 Fetches pages using httpx (no JS rendering).
-Fallback strategy: tries GET after HEAD if needed.
+Uses ``SafeHttpxClient`` for SSRF protection.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import httpx
 
 from app.collectors.base import BaseCollector, CollectResult, FetchErrorCode
 from app.core import get_settings
+from app.security.safe_http_client import SafeHttpxClient
 
 _MAX_HTML_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -56,22 +57,52 @@ def _hash_content(content: bytes) -> str:
 
 
 class HttpxCollector(BaseCollector):
-    """Fetch a page using httpx (static HTML, no JS)."""
+    """Fetch a page using httpx (static HTML, no JS).
+
+    Uses :class:`SafeHttpxClient` to enforce SSRF protection
+    on every request and each redirect hop.
+    """
 
     async def fetch(self, url: str, *, timeout: int = 20) -> CollectResult:
-        """Fetch URL with httpx, return normalised result."""
+        """Fetch URL with safe httpx client, return normalised result.
+
+        The :class:`SafeHttpxClient` handles:
+        - SSRF checks before the request and on every redirect
+        - Content-Type allowlisting
+        - Response body size limiting
+        - Manual redirect following (max 5 hops)
+        """
         settings = get_settings()
         user_agent = settings.COLLECTION_USER_AGENT
         start = time.monotonic()
 
+        safe_client = SafeHttpxClient(
+            timeout=timeout,
+            headers={"User-Agent": user_agent},
+        )
+
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(timeout),
-                follow_redirects=True,
-                max_redirects=5,
-                headers={"User-Agent": user_agent},
-            ) as client:
-                response = await client.get(url)
+            response = await safe_client.get(url)
+        except ValueError as exc:
+            elapsed = int((time.monotonic() - start) * 1000)
+            error_str = str(exc)
+            # SSRF / safety violations
+            if "blocked" in error_str or "metadata" in error_str or "private" in error_str:
+                return CollectResult(
+                    success=False,
+                    error_code=FetchErrorCode.CONNECTION_REFUSED,
+                    error_message=error_str,
+                    fetch_time_ms=elapsed,
+                    used_playwright=False,
+                )
+            # Content type / size violations
+            return CollectResult(
+                success=False,
+                error_code=FetchErrorCode.FETCH_HTTP_ERROR,
+                error_message=error_str,
+                fetch_time_ms=elapsed,
+                used_playwright=False,
+            )
         except httpx.TimeoutException:
             elapsed = int((time.monotonic() - start) * 1000)
             return CollectResult(
@@ -120,7 +151,7 @@ class HttpxCollector(BaseCollector):
                 used_playwright=False,
             )
 
-        # Check content size
+        # Check content size (belt-and-suspenders with SafeHttpxClient's limit)
         content = response.content
         if len(content) > _MAX_HTML_BYTES:
             return CollectResult(

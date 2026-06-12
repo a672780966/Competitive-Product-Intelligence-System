@@ -9,13 +9,16 @@ Endpoints:
 from __future__ import annotations
 
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.models.user import User
 from app.services.report_service import ReportService
 
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
@@ -30,6 +33,7 @@ class ComparisonBody(BaseModel):
 @router.get("/product/{product_id}")
 async def single_product_report(
     product_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
     db: AsyncSession = Depends(get_db),
 ):
     """Generate a single-product Markdown report."""
@@ -49,6 +53,7 @@ async def single_product_report(
 @router.post("/compare")
 async def comparison_report(
     body: ComparisonBody,
+    current_user: Annotated[User, Depends(get_current_user)],
     db: AsyncSession = Depends(get_db),
 ):
     """Generate a multi-product comparison Markdown report."""

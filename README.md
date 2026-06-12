@@ -40,7 +40,7 @@ docker compose up -d
 启动后访问：
 - 后端 API：http://localhost:8000
 - API 文档：http://localhost:8000/docs
-- 前端页面：http://localhost:5173
+- 前端页面：http://localhost:3000
 
 ### 3. 本地开发
 

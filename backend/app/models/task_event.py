@@ -39,7 +39,7 @@ class TaskEvent(Base):
     )
 
     # relationship
-    task: Mapped["CollectionTask"] = relationship(back_populates="events")
+    task: Mapped[CollectionTask] = relationship(back_populates="events")
 
     def __repr__(self) -> str:
         stage_str = self.stage.value if isinstance(self.stage, TaskStage) else str(self.stage)

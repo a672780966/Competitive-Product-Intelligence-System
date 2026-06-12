@@ -7,10 +7,9 @@ noise removal, and markdown generation.
 
 from __future__ import annotations
 
+from app.cleaners.candidate_extractor import _PRICE_PATTERN, extract_candidates
 from app.cleaners.html_cleaner import HtmlCleaner, _remove_noise, _to_markdown
 from app.cleaners.jsonld_extractor import extract_jsonld
-from app.cleaners.candidate_extractor import extract_candidates, _PRICE_PATTERN
-
 
 # ══════════════════════════════════════════════════════════════════
 # Sample HTML fragments

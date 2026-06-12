@@ -7,7 +7,7 @@ from structured product data.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -25,7 +25,7 @@ def generate_single_product_report(
     """Generate a single-product Markdown brief."""
     sd = structured_data
     ad = analysis_data
-    collected = (collected_at or datetime.now(timezone.utc)).strftime("%Y-%m-%d %H:%M UTC")
+    collected = (collected_at or datetime.now(UTC)).strftime("%Y-%m-%d %H:%M UTC")
 
     lines = [
         f"# 产品竞品简报：{product_name or '未知'}",
@@ -262,7 +262,7 @@ def generate_comparison_report(
     lines = [
         "# 竞品对比简报",
         "",
-        f"生成时间：{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+        f"生成时间：{datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}",
         f"对比产品数：{len(products)}",
         "",
     ]

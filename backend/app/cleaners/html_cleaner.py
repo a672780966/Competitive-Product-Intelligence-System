@@ -13,17 +13,14 @@ Pipeline:
 from __future__ import annotations
 
 import hashlib
-import json
-import re
 import urllib.parse
 from dataclasses import dataclass, field
-from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup, Tag
 
-from app.core.logging import get_logger
-from app.cleaners.jsonld_extractor import extract_jsonld
 from app.cleaners.candidate_extractor import extract_candidates
+from app.cleaners.jsonld_extractor import extract_jsonld
+from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
