@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
 from app.models.enums import ReviewStatus
-from app.models.types import GUID
+from app.models.types import GUID, JSONB
 
 
 class ReviewRecord(Base, TimestampMixin):
@@ -26,8 +26,8 @@ class ReviewRecord(Base, TimestampMixin):
     reviewer: Mapped[str | None] = mapped_column(String(128))
     decision: Mapped[ReviewStatus] = mapped_column(String(32), nullable=False)
     comments: Mapped[str | None] = mapped_column(Text)
-    corrections: Mapped[dict | None] = mapped_column(String(2048))
-    # corrections stored as JSON string — parsed by service layer
+    corrections: Mapped[dict | None] = mapped_column(JSONB)
+    changed_fields: Mapped[list | None] = mapped_column(JSONB)
 
     def __repr__(self) -> str:
         return f"<ReviewRecord {self.id} {self.decision.value}>"
