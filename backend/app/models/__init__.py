@@ -1,29 +1,48 @@
-"""SQLAlchemy Base and common mixins for all models."""
+"""CPIS V1 — SQLAlchemy models.
+
+All models inherit from ``Base`` (declarative base).
+Import here so Alembic's ``env.py`` can discover them via ``from app.models import Base``.
+"""
 
 from __future__ import annotations
 
-from datetime import datetime
+from app.models.base import Base, TimestampMixin
+from app.models.enums import (
+    ProductCategory,
+    ReviewStatus,
+    SyncStatus,
+    TaskPriority,
+    TaskStage,
+    TaskStatus,
+)
+from app.models.collection_task import CollectionTask
+from app.models.task_event import TaskEvent
+from app.models.source_snapshot import SourceSnapshot
+from app.models.product import Product
+from app.models.product_version import ProductVersion
+from app.models.product_evidence import ProductEvidence
+from app.models.review_record import ReviewRecord
+from app.models.feishu_sync_record import FeishuSyncRecord
+from app.models.prompt_template import PromptTemplate
+from app.models.audit_log import AuditLog
 
-from sqlalchemy import DateTime, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-
-class Base(DeclarativeBase):
-    """Declarative base for all CPIS models."""
-    pass
-
-
-class TimestampMixin:
-    """Mixin that adds created_at and updated_at timestamp columns."""
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+__all__ = [
+    "Base",
+    "TimestampMixin",
+    "ProductCategory",
+    "ReviewStatus",
+    "SyncStatus",
+    "TaskPriority",
+    "TaskStage",
+    "TaskStatus",
+    "CollectionTask",
+    "TaskEvent",
+    "SourceSnapshot",
+    "Product",
+    "ProductVersion",
+    "ProductEvidence",
+    "ReviewRecord",
+    "FeishuSyncRecord",
+    "PromptTemplate",
+    "AuditLog",
+]
