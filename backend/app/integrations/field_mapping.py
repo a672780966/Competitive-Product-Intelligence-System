@@ -16,6 +16,7 @@ def build_feishu_record(
     unique_key: str,
     version_no: int,
     source_url: str,
+    collected_at: str = "",
 ) -> dict:
     """Build a Feishu record dict from CPIS product data.
 
@@ -40,7 +41,7 @@ def build_feishu_record(
         "来源链接": source_url,
         "价格信息": _build_price_text(sd),
         "核心卖点": _join(sd.get("core_benefits")),
-        "主要参数": _join(sd.get("features")),
+        "主要参数": _build_specs(sd),
         "功能列表": _join(sd.get("features")),
         "技术原理": _join(sd.get("tech_principles")),
         "工作模式": _join(sd.get("working_modes")),
@@ -64,7 +65,7 @@ def build_feishu_record(
         "建议动作": _join(ad.get("suggested_actions")),
         "分析摘要": ad.get("analysis_summary") or "",
         "数据版本": f"v{version_no}",
-        "最后采集时间": "",
+        "最后采集时间": collected_at,
     }
 
 

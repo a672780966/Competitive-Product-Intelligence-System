@@ -88,6 +88,11 @@ class FeishuClient:
                 method, url, json=json, params=params, headers=headers,
             )
 
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise FeishuApiError(exc.response.status_code, exc.response.text[:500])
+
         data = response.json()
         code = data.get("code", -1)
         msg = data.get("msg", "")

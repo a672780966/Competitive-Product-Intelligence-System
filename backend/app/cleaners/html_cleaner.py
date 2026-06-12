@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import urllib.parse
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
@@ -115,7 +116,7 @@ class HtmlCleaner:
         cleaned_text = _truncate_text(cleaned_text, _MAX_TEXT_CHARS)
 
         # 5. Generate markdown
-        cleaned_markdown = _to_markdown(soup)
+        cleaned_markdown = _to_markdown(soup, page_url=page_url)
         cleaned_markdown = _truncate_text(cleaned_markdown, _MAX_TEXT_CHARS)
 
         # 6. Compute hash
@@ -162,8 +163,12 @@ def _extract_clean_text(soup: BeautifulSoup) -> str:
     return "\n\n".join(parts)
 
 
-def _to_markdown(soup: BeautifulSoup) -> str:
-    """Convert cleaned HTML to a simple markdown-like format."""
+def _to_markdown(soup: BeautifulSoup, page_url: str = "") -> str:
+    """Convert cleaned HTML to a simple markdown-like format.
+
+    If ``page_url`` is provided, relative ``src`` attributes on images
+    are resolved to absolute URLs.
+    """
     lines: list[str] = []
 
     for tag in soup.find_all(True):
@@ -200,8 +205,10 @@ def _to_markdown(soup: BeautifulSoup) -> str:
             elif tag_name == "img":
                 alt = tag.get("alt", "")
                 src = tag.get("src", "")
+                if src and page_url:
+                    src = urllib.parse.urljoin(page_url, src)
                 if alt:
-                    lines.append(f"![{alt}]({src})")
+                    lines.append(f"![{alt}]({src})" if src else alt)
                     lines.append("")
 
     return "\n".join(lines).strip()

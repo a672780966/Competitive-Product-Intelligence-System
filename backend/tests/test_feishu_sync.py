@@ -76,8 +76,8 @@ class TestFieldMapping:
     def test_join_list_fields(self):
         sd = {"features": ["A", "B", "C"]}
         record = build_feishu_record(sd, {}, "k", 1, "")
-        assert "A" in record["主要参数"]
-        assert "B" in record["主要参数"]
+        assert "A" in record["功能列表"]
+        assert "B" in record["功能列表"]
 
 
 # ══════════════════════════════════════════════════════════════════

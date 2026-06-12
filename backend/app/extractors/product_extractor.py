@@ -97,19 +97,29 @@ class ProductExtractor:
             )
 
         # 4. Build result from parsed data
-        structured = ProductFactFields(**parsed.get("structured_data", {}))
-        analysis = ProductAnalysisFields(**parsed.get("analysis_data", {}))
+        try:
+            structured = ProductFactFields(**parsed.get("structured_data", {}))
+            analysis = ProductAnalysisFields(**parsed.get("analysis_data", {}))
+        except (TypeError, ValueError) as exc:
+            logger.error("pydantic_construction_failed", error=str(exc))
+            return ExtractionResult(
+                overall_confidence=0.0,
+                ai_model=self._provider.model,
+                prompt_version=PROMPT_VERSION,
+                missing_fields=["All — structured data parse failed"],
+            )
 
         evidence_raw = parsed.get("evidence", {})
         evidence: dict[str, FieldEvidence] = {}
-        for field_name, ev in evidence_raw.items():
-            if isinstance(ev, dict):
-                evidence[field_name] = FieldEvidence(
-                    value=str(ev.get("value", "")),
-                    confidence=float(ev.get("confidence", 0.0)),
-                    evidence=str(ev.get("evidence", "")),
-                    source=str(ev.get("source", "ai")),
-                )
+        if isinstance(evidence_raw, dict):
+            for field_name, ev in evidence_raw.items():
+                if isinstance(ev, dict):
+                    evidence[field_name] = FieldEvidence(
+                        value=str(ev.get("value", "")),
+                        confidence=float(ev.get("confidence", 0.0)),
+                        evidence=str(ev.get("evidence", "")),
+                        source=str(ev.get("source", "ai")),
+                    )
 
         overall_confidence = float(parsed.get("overall_confidence", 0.0))
         missing = parsed.get("missing_fields", [])

@@ -241,12 +241,11 @@ class TaskService:
             )
         else:
             status = TaskStatus.BLOCKED
-            if result.error_code:
-                await self._repo.update_status(
-                    task.id, status,
-                    error_code=result.error_code.value,
-                    error_message=result.error_message,
-                )
+            await self._repo.update_status(
+                task.id, status,
+                error_code=result.error_code.value if result.error_code else None,
+                error_message=result.error_message,
+            )
             await self._repo.create_event(
                 task_id=task.id,
                 stage="validation",

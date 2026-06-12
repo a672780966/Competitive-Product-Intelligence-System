@@ -50,4 +50,5 @@ class CollectionTask(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<CollectionTask {self.id} {self.status.value}>"
+        status = self.status.value if hasattr(self.status, "value") else self.status
+        return f"<CollectionTask {self.id} {status}>"

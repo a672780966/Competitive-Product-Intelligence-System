@@ -147,11 +147,10 @@ class ProductVersioningService:
         # 7. Determine review status
         if extraction.overall_confidence >= _CONFIDENCE_AUTO_APPROVE and not extraction.missing_fields:
             review_status = ReviewStatus.AUTO_APPROVED
-            # Auto-approved: update current_version
             await self._repo.set_current_version(product.id, version.id)
         elif extraction.overall_confidence >= _CONFIDENCE_AUTO_APPROVE:
-            review_status = ReviewStatus.AUTO_APPROVED
-            await self._repo.set_current_version(product.id, version.id)
+            # Has missing_fields — human must review before becoming current
+            review_status = ReviewStatus.NEEDS_REVIEW
         else:
             review_status = ReviewStatus.NEEDS_REVIEW
             # Don't set current_version until reviewed

@@ -53,7 +53,12 @@ class FeishuBitable:
         existing = await self._search_by_unique_key(unique_key)
 
         # 2. Build the Feishu record fields
-        fields = build_feishu_record(structured_data, analysis_data, unique_key, version_no, source_url)
+        from datetime import datetime, timezone
+        collected_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        fields = build_feishu_record(
+            structured_data, analysis_data, unique_key,
+            version_no, source_url, collected_at=collected_at,
+        )
 
         # 3. Create or update
         if existing:

@@ -68,19 +68,18 @@ class PlaywrightCollector(BaseCollector):
                     "--disable-gpu",
                 ],
             )
-            context = await browser.new_context(
-                user_agent=user_agent,
-                viewport={"width": 1280, "height": 800},
-                ignore_https_errors=False,
-                java_script_enabled=True,
-            )
-            page = await context.new_page()
-
             try:
+                context = await browser.new_context(
+                    user_agent=user_agent,
+                    viewport={"width": 1280, "height": 800},
+                    ignore_https_errors=False,
+                    java_script_enabled=True,
+                )
+                page = await context.new_page()
+
                 response = await page.goto(url, wait_until="domcontentloaded", timeout=timeout * 1000)
 
                 if response is None:
-                    await browser.close()
                     return CollectResult(
                         success=False,
                         error_code=FetchErrorCode.EMPTY_RESPONSE,
@@ -91,12 +90,10 @@ class PlaywrightCollector(BaseCollector):
                 final_url = page.url
                 page_title = await page.title() or ""
 
-                # Get the full HTML after JS rendering
                 html_content = await page.content()
                 content = html_content.encode("utf-8")
 
                 if len(content) > _MAX_HTML_BYTES:
-                    await browser.close()
                     return CollectResult(
                         success=False,
                         final_url=final_url,
@@ -108,7 +105,6 @@ class PlaywrightCollector(BaseCollector):
                 headers = dict(response.headers) if response.headers else {}
                 content_hash = hashlib.sha256(content).hexdigest()
 
-                await browser.close()
                 return CollectResult(
                     success=True,
                     final_url=final_url,
@@ -120,7 +116,6 @@ class PlaywrightCollector(BaseCollector):
                 )
 
             except Exception as exc:
-                await browser.close()
                 error_str = str(exc)
                 if "Timeout" in error_str:
                     return CollectResult(
@@ -133,3 +128,5 @@ class PlaywrightCollector(BaseCollector):
                     error_code=FetchErrorCode.PLAYWRIGHT_ERROR,
                     error_message=error_str,
                 )
+            finally:
+                await browser.close()

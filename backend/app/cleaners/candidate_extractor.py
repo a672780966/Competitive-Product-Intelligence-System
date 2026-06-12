@@ -81,12 +81,10 @@ def extract_candidates(
     for tag in soup.find_all(["meta", "link", "span", "div", "a"]):
         if not isinstance(tag, Tag):
             continue
-        content = (
-            tag.get("content", "")
-            or tag.get("itemprop", "")
-            or tag.get("class", [""])[0]
-        )
-        if isinstance(content, str) and "brand" in content.lower():
+        # Check itemprop or class for "brand" keyword (NOT the content value)
+        itemprop = tag.get("itemprop", "")
+        classes = " ".join(tag.get("class", [])) if isinstance(tag.get("class"), list) else str(tag.get("class", ""))
+        if "brand" in str(itemprop).lower() or "brand" in classes.lower():
             text = (tag.get("content", "") or tag.get_text(strip=True))
             if text and text not in brands:
                 brands.append(text)
@@ -117,12 +115,15 @@ def _extract_jsonld_prices(block: dict, prices: list[dict]) -> None:
             offers = [offers]
         if isinstance(offers, list):
             for offer in offers:
-                price = offer.get("price") or offer.get("priceSpecification", {}).get("price")
+                raw_price = offer.get("price")
+                if raw_price is None:
+                    spec = offer.get("priceSpecification")
+                    raw_price = spec.get("price") if isinstance(spec, dict) else None
                 currency = offer.get("priceCurrency", "")
-                if price:
+                if raw_price is not None:
                     prices.append({
-                        "raw": f"{currency} {price}",
-                        "value": str(price),
+                        "raw": f"{currency} {raw_price}",
+                        "value": str(raw_price),
                         "currency": currency,
                         "source": "jsonld",
                     })
