@@ -240,18 +240,36 @@ class TaskService:
                 message="URL validation passed — ready for collection",
             )
         else:
-            status = TaskStatus.BLOCKED
+            # ✅ 修复：确定正确的状态（BLOCKED vs FAILED）
+            status = TaskStatus.BLOCKED if result.status.value == "blocked" else TaskStatus.FAILED
+
+            # ✅ 修复：确保 error_code 总是有值（fallback 到默认值）
+            error_code = result.error_code.value if result.error_code else "VALIDATION_FAILED"
+            error_message = result.error_message or f"URL validation {result.status.value}"
+
+            logger.warning(
+                "url_validation_failed",
+                task_id=str(task.id),
+                status=result.status.value,
+                error_code=error_code,
+                error_message=error_message,
+                warnings=result.warnings,
+            )
+
+            # ✅ 无条件更新状态（移除守卫条件）
             await self._repo.update_status(
                 task.id, status,
-                error_code=result.error_code.value if result.error_code else None,
-                error_message=result.error_message,
+                error_code=error_code,
+                error_message=error_message,
             )
+
+            # ✅ 创建事件记录
             await self._repo.create_event(
                 task_id=task.id,
                 stage="validation",
                 status=status,
-                message=result.error_message or "URL validation failed",
-                error_code=result.error_code.value if result.error_code else None,
+                message=error_message,
+                error_code=error_code,
             )
 
     # ── Mappers ─────────────────────────────────────────────────

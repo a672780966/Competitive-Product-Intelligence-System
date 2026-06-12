@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -23,7 +23,8 @@ class CollectionTask(Base, TimestampMixin):
     normalized_url: Mapped[str | None] = mapped_column(String(2048))
     domain: Mapped[str | None] = mapped_column(String(255), index=True)
     status: Mapped[TaskStatus] = mapped_column(
-        String(32), default=TaskStatus.PENDING, index=True, nullable=False,
+        Enum(TaskStatus, native_enum=False, values_callable=lambda x: [e.value for e in x]),
+        default=TaskStatus.PENDING, index=True, nullable=False,
     )
     priority: Mapped[TaskPriority] = mapped_column(
         Integer, default=TaskPriority.NORMAL, nullable=False,
@@ -50,5 +51,5 @@ class CollectionTask(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        status = self.status.value if hasattr(self.status, "value") else self.status
-        return f"<CollectionTask {self.id} {status}>"
+        status_str = self.status.value if isinstance(self.status, TaskStatus) else str(self.status)
+        return f"<CollectionTask {self.id} {status_str}>"

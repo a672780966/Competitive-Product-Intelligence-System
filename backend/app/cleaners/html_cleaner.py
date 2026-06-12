@@ -202,6 +202,13 @@ def _to_markdown(soup: BeautifulSoup, page_url: str = "") -> str:
             elif tag_name in ("p", "td", "th"):
                 lines.append(text)
                 lines.append("")
+            elif tag_name == "a":
+                href = tag.get("href", "")
+                if href and page_url:
+                    href = urllib.parse.urljoin(page_url, href)
+                if text != href:
+                    lines.append(f"[{text}]({href})" if href else text)
+                    lines.append("")
             elif tag_name == "img":
                 alt = tag.get("alt", "")
                 src = tag.get("src", "")

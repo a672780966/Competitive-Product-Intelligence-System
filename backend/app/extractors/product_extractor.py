@@ -100,26 +100,51 @@ class ProductExtractor:
         try:
             structured = ProductFactFields(**parsed.get("structured_data", {}))
             analysis = ProductAnalysisFields(**parsed.get("analysis_data", {}))
-        except (TypeError, ValueError) as exc:
-            logger.error("pydantic_construction_failed", error=str(exc))
+        except Exception as exc:
+            # ✅ 捕获所有异常（包括 Pydantic ValidationError）
+            # 避免返回 500，改为返回低置信度结果
+            logger.warning(
+                "pydantic_construction_failed",
+                error=str(exc),
+                error_type=type(exc).__name__,
+                structured_data=parsed.get("structured_data", {}),
+                analysis_data=parsed.get("analysis_data", {}),
+            )
             return ExtractionResult(
                 overall_confidence=0.0,
                 ai_model=self._provider.model,
                 prompt_version=PROMPT_VERSION,
-                missing_fields=["All — structured data parse failed"],
+                missing_fields=["All — structured data validation failed"],
             )
 
+        # ✅ 修复：确保 evidence_raw 是字典再处理
         evidence_raw = parsed.get("evidence", {})
         evidence: dict[str, FieldEvidence] = {}
+
         if isinstance(evidence_raw, dict):
             for field_name, ev in evidence_raw.items():
                 if isinstance(ev, dict):
-                    evidence[field_name] = FieldEvidence(
-                        value=str(ev.get("value", "")),
-                        confidence=float(ev.get("confidence", 0.0)),
-                        evidence=str(ev.get("evidence", "")),
-                        source=str(ev.get("source", "ai")),
-                    )
+                    try:
+                        evidence[field_name] = FieldEvidence(
+                            value=str(ev.get("value", "")),
+                            confidence=float(ev.get("confidence", 0.0)),
+                            evidence=str(ev.get("evidence", "")),
+                            source=str(ev.get("source", "ai")),
+                        )
+                    except (TypeError, ValueError, KeyError) as exc:
+                        # ✅ 单个字段异常不应该中止整个处理
+                        logger.warning(
+                            "evidence_field_parse_failed",
+                            field_name=field_name,
+                            error=str(exc),
+                        )
+                        continue  # 跳过这个字段，继续处理其他字段
+        else:
+            # ✅ evidence_raw 不是字典时的防守
+            logger.warning(
+                "evidence_raw_not_dict",
+                evidence_raw_type=type(evidence_raw).__name__,
+            )
 
         overall_confidence = float(parsed.get("overall_confidence", 0.0))
         missing = parsed.get("missing_fields", [])

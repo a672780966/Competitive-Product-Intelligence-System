@@ -146,14 +146,34 @@ class ProductVersioningService:
 
         # 7. Determine review status
         if extraction.overall_confidence >= _CONFIDENCE_AUTO_APPROVE and not extraction.missing_fields:
+            # ✅ 仅在 confidence 高 + 无缺失字段 时自动批准
             review_status = ReviewStatus.AUTO_APPROVED
             await self._repo.set_current_version(product.id, version.id)
-        elif extraction.overall_confidence >= _CONFIDENCE_AUTO_APPROVE:
-            # Has missing_fields — human must review before becoming current
+            logger.info(
+                "product_auto_approved",
+                product_id=str(product.id),
+                confidence=extraction.overall_confidence,
+            )
+        elif extraction.missing_fields:
+            # ✅ 只要有缺失字段就强制人工复核
             review_status = ReviewStatus.NEEDS_REVIEW
+            # 不调用 set_current_version
+            logger.info(
+                "product_needs_review_missing_fields",
+                product_id=str(product.id),
+                missing_fields=extraction.missing_fields,
+            )
+        elif extraction.overall_confidence < _CONFIDENCE_AUTO_APPROVE:
+            # 低置信度也需要人工复核
+            review_status = ReviewStatus.NEEDS_REVIEW
+            logger.info(
+                "product_needs_review_low_confidence",
+                product_id=str(product.id),
+                confidence=extraction.overall_confidence,
+            )
         else:
+            # 兜底情况
             review_status = ReviewStatus.NEEDS_REVIEW
-            # Don't set current_version until reviewed
 
         await self._repo.update_review_status(product.id, review_status)
         logger.info(

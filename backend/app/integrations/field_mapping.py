@@ -7,6 +7,7 @@ Each column name corresponds to a field in the Feishu multi-dimensional table.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 
@@ -16,12 +17,15 @@ def build_feishu_record(
     unique_key: str,
     version_no: int,
     source_url: str,
-    collected_at: str = "",
+    collected_at: datetime | None = None,
 ) -> dict:
     """Build a Feishu record dict from CPIS product data.
 
     Keys are the Feishu column names (configured in the Bitable).
     Values are the data to write.
+
+    Args:
+        collected_at: Optional timestamp. If provided, included in the record.
     """
     sd = structured_data
     ad = analysis_data
@@ -41,11 +45,11 @@ def build_feishu_record(
         "来源链接": source_url,
         "价格信息": _build_price_text(sd),
         "核心卖点": _join(sd.get("core_benefits")),
+        # ✅ 修复 #11：主要参数使用 specs，功能列表使用 analysis data
         "主要参数": _build_specs(sd),
-        "功能列表": _join(sd.get("features")),
+        "功能列表": _build_features(ad),
         "技术原理": _join(sd.get("tech_principles")),
         "工作模式": _join(sd.get("working_modes")),
-        "规格参数": _build_specs(sd),
         "材质": _join(sd.get("material")),
         "配件清单": _join(sd.get("accessories")),
         "包装清单": _join(sd.get("package_contents")),
@@ -65,7 +69,8 @@ def build_feishu_record(
         "建议动作": _join(ad.get("suggested_actions")),
         "分析摘要": ad.get("analysis_summary") or "",
         "数据版本": f"v{version_no}",
-        "最后采集时间": collected_at,
+        # ✅ 修复 #10：传入正确的采集时间
+        "最后采集时间": collected_at.isoformat() if collected_at else "",
     }
 
 
@@ -98,3 +103,11 @@ def _build_specs(sd: dict) -> str:
         if val:
             specs.append(f"{label}: {val}")
     return "\n".join(specs)
+
+
+def _build_features(ad: dict) -> str:
+    """Build features string from analysis data."""
+    features = ad.get("features", [])
+    if isinstance(features, list):
+        return "\n".join(str(f) for f in features if f)
+    return str(features) if features else ""

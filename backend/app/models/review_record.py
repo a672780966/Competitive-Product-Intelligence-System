@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -24,10 +24,14 @@ class ReviewRecord(Base, TimestampMixin):
         nullable=False, index=True,
     )
     reviewer: Mapped[str | None] = mapped_column(String(128))
-    decision: Mapped[ReviewStatus] = mapped_column(String(32), nullable=False)
+    decision: Mapped[ReviewStatus] = mapped_column(
+        Enum(ReviewStatus, native_enum=False, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+    )
     comments: Mapped[str | None] = mapped_column(Text)
     corrections: Mapped[dict | None] = mapped_column(JSONB)
     changed_fields: Mapped[list | None] = mapped_column(JSONB)
 
     def __repr__(self) -> str:
-        return f"<ReviewRecord {self.id} {self.decision.value}>"
+        decision_str = self.decision.value if isinstance(self.decision, ReviewStatus) else str(self.decision)
+        return f"<ReviewRecord {self.id} {decision_str}>"
