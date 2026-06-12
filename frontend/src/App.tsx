@@ -1,31 +1,27 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import { Button, Typography } from "antd";
-
-const { Title, Paragraph } = Typography;
-
-function Home() {
-  return (
-    <div style={{ padding: 48, textAlign: "center" }}>
-      <Title>CPIS V1</Title>
-      <Paragraph>竞品公开信息自动采集与分析系统</Paragraph>
-      <Paragraph type="secondary">
-        Competitive Product Intelligence System
-      </Paragraph>
-      <Button type="primary" size="large" disabled>
-        进入管理后台
-      </Button>
-      <Paragraph type="secondary" style={{ marginTop: 24 }}>
-        后台管理页面将在后续节点开发
-      </Paragraph>
-    </div>
-  );
-}
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AdminLayout from "./components/Layout";
+import TaskListPage from "./features/tasks/TaskList";
+import TaskDetailPage from "./features/tasks/TaskDetail";
+import ProductListPage from "./features/products/ProductList";
+import ReviewListPage from "./features/reviews/ReviewList";
+import ReviewDetailPage from "./features/reviews/ReviewDetail";
+import SyncRecordsPage from "./features/sync/SyncRecords";
+import ReportPage from "./features/reports/ReportPage";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/tasks" replace />} />
+          <Route path="tasks" element={<TaskListPage />} />
+          <Route path="tasks/:id" element={<TaskDetailPage />} />
+          <Route path="products" element={<ProductListPage />} />
+          <Route path="reviews" element={<ReviewListPage />} />
+          <Route path="reviews/:versionId" element={<ReviewDetailPage />} />
+          <Route path="sync" element={<SyncRecordsPage />} />
+          <Route path="reports" element={<ReportPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
