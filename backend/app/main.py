@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router as health_router
+from app.api.tasks import router as tasks_router
 from app.core import get_settings
 from app.core.logging import setup_logging
 
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
 
     # --- Routers ---
     app.include_router(health_router, prefix="/health")
+    app.include_router(tasks_router)
 
     @app.get("/")
     async def root() -> dict[str, str]:

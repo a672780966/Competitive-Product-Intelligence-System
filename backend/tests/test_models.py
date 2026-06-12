@@ -90,10 +90,10 @@ async def test_collection_task_status_transitions(db_session: AsyncSession) -> N
     db_session.add(task)
     await db_session.commit()
 
-    task.status = TaskStatus.COLLECTING
+    task.status = TaskStatus.FETCHING
     await db_session.commit()
 
-    assert task.status == TaskStatus.COLLECTING
+    assert task.status == TaskStatus.FETCHING
 
 
 # ── TaskEvent ───────────────────────────────────────────────────

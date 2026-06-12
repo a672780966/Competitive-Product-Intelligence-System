@@ -6,21 +6,20 @@ import enum
 
 
 class TaskStatus(str, enum.Enum):
-    """Collection task lifecycle status."""
+    """Collection task lifecycle status — matches the state machine defined in Node 05."""
 
     PENDING = "pending"
     VALIDATING = "validating"
-    VALIDATION_FAILED = "validation_failed"
-    COLLECTING = "collecting"
-    COLLECTED = "collected"
+    FETCHING = "fetching"
     CLEANING = "cleaning"
-    CLEANED = "cleaned"
     EXTRACTING = "extracting"
-    EXTRACTED = "extracted"
-    REVIEWING = "reviewing"
+    REVIEW_PENDING = "review_pending"
+    SYNCING = "syncing"
     COMPLETED = "completed"
+    PARTIAL_SUCCESS = "partial_success"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    BLOCKED = "blocked"
 
 
 class TaskPriority(int, enum.Enum):
