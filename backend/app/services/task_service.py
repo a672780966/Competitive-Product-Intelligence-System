@@ -15,7 +15,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
-from app.models import CollectionTask
+from app.models import CollectionTask, AuditLog
 from app.models.enums import TaskPriority, TaskStatus
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import (
@@ -37,6 +37,7 @@ class TaskService:
     """Business logic for collection task management."""
 
     def __init__(self, db: AsyncSession) -> None:
+        self._db = db
         self._repo = TaskRepository(db)
 
     # ── Create ──────────────────────────────────────────────────
@@ -58,6 +59,15 @@ class TaskService:
         )
         task = await self._repo.create(task)
         logger.info("task_created", task_id=str(task.id), url=task.source_url)
+
+        # Audit log
+        self._db.add(AuditLog(
+            actor=req.created_by or "system",
+            action="task.create",
+            resource_type="task",
+            resource_id=str(task.id),
+            detail=f"source_url={task.source_url}",
+        ))
 
         # Record creation event
         await self._repo.create_event(
@@ -135,6 +145,13 @@ class TaskService:
         )
         logger.info("task_retried", task_id=str(task_id), attempt=task.retry_count)
 
+        # Audit log
+        self._db.add(AuditLog(
+            actor="system", action="task.retry",
+            resource_type="task", resource_id=str(task_id),
+            detail=f"attempt={task.retry_count}",
+        ))
+
         # Re-run validation
         await self._run_validation(task)
 
@@ -157,6 +174,13 @@ class TaskService:
             message="Task cancelled by user",
         )
         logger.info("task_cancelled", task_id=str(task_id))
+
+        # Audit log
+        self._db.add(AuditLog(
+            actor="system", action="task.cancel",
+            resource_type="task", resource_id=str(task_id),
+            detail="Cancelled by user",
+        ))
         return await self.get_task(task_id)
 
     async def get_events(self, task_id: uuid.UUID) -> list[TaskEventResponse] | None:

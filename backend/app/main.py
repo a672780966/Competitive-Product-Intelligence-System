@@ -12,7 +12,9 @@ from app.api.reports import router as reports_router
 from app.api.reviews import router as reviews_router
 from app.api.tasks import router as tasks_router
 from app.core import get_settings
+from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
+from app.core.middleware import RequestLoggingMiddleware
 
 
 def create_app() -> FastAPI:
@@ -45,6 +47,11 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Request-logging middleware (adds request_id to every request)
+    app.add_middleware(RequestLoggingMiddleware)
+
+    # --- Exception handlers ---
+    register_exception_handlers(app)
 
     # --- Routers ---
     app.include_router(health_router, prefix="/health")
