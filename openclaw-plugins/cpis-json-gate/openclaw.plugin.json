@@ -1,0 +1,8 @@
+{
+  "id": "cpis-json-gate",
+  "name": "CPIS JSON Gate",
+  "description": "Blocks malformed JSON and invalid routes in CPIS sessions_send calls.",
+  "version": "1.1.0",
+  "activation": {"onStartup": true},
+  "configSchema": {"type": "object", "additionalProperties": false, "properties": {}}
+}
