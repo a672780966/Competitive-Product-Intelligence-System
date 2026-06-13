@@ -34,4 +34,13 @@
 - `message`: 完整序列化 JSON
 
 外层必须为 `agent_handoff`，其中 `from_agent=cpis-info-collector`、`to_agent=cpis-product-analyst`、`payload_type=evidence_batch`、`payload` 为对象。被 `CPIS_JSON_GATE_BLOCKED` 拒绝时按错误修正，最多重试两次；未成功交接不得声称完成。
+
+### CPIS V2 图片交接硬约束
+
+- `image_url` 必须是无需登录即可直接获取图片内容的绝对 HTTP/HTTPS URL。
+- 禁止传递网页详情地址、`data:` URI、base64、本地文件路径或 Markdown 图片语法作为 `image_url`。
+- 优先使用商品主图原始地址并保留查询参数；不得凭空改写图片域名或文件名。
+- 应确认响应是图片内容，而不是 HTML、验证码、登录页或 403/404 页面。
+- 无法取得有效图片时使用 `null`，并在 `collection_summary.warnings` 记录原因。
+- `image_url` 必须原样写入 `evidence_batch.items`。采集 Agent 不负责写入本地文件。
 <!-- CPIS_V2_RULES_END -->
