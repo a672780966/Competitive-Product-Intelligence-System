@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "run_id": "example_amazon_tens_20260613_ev001",
+    "task": "采集 Amazon US 畅销榜前十名产品信息",
+    "collection_scope": {
+      "url": "https://www.amazon.com/best-sellers-electronics/zgbs/electronics",
+      "max_items": 10,
+      "marketplace": "amazon_us",
+      "ranking_type": "sales_rank",
+      "max_items_per_ranking": 10
+    }
+  },
+  "instructions": "请访问 Amazon US Best Sellers 电子产品分类榜单，采集排名前 10 的产品。每个产品必须包含：product_name、product_url、image_url、asin、brand、价格、评分、评论数、ranking_position、ranking_source_id。按 evidence_batch 格式组织 JSON，调用 sessions_send 传递给 cpis-product-analyst。"
+}

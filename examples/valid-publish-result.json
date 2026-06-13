@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "object_type": "publish_result",
+  "run_id": "amazon_us_tens_20260613_e2e001",
+  "agent_id": "cpis-knowledge-curator",
+  "status": "success",
+  "published": true,
+  "message_zh": "竞品分析报告发布成功",
+  "message_en": "Competitive product analysis report published successfully",
+  "feishu_url": "https://feishu.cn/docx/TJBnduVpmofKEpxPP6dcRd3Ende",
+  "images_expected": 2,
+  "images_uploaded": 2,
+  "image_failures": []
+}

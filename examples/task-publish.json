@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "run_id": "example_amazon_tens_20260613_pub001",
+    "task": "发布竞品分析飞书报告"
+  },
+  "instructions": "你已收到来自 cpis-product-analyst 的分析数据。请：(1) 生成双语飞书报告；(2) 上传产品图片；(3) 返回严格的 publish_result JSON，禁止 Markdown 围栏和任何额外文字。"
+}

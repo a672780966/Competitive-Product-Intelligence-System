@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "object_type": "publish_result",
+  "run_id": "amazon_us_tens_20260613_e2e003",
+  "agent_id": "cpis-knowledge-curator",
+  "status": "failed",
+  "published": false,
+  "message_zh": "飞书发布失败：文档创建权限不足",
+  "message_en": "Feishu publish failed: insufficient document creation permission",
+  "feishu_url": null,
+  "images_expected": 0,
+  "images_uploaded": 0,
+  "image_failures": []
+}

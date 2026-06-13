@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "object_type": "publish_result",
+  "run_id": "amazon_us_tens_20260613_e2e002",
+  "agent_id": "cpis-knowledge-curator",
+  "status": "partial",
+  "published": true,
+  "message_zh": "竞品分析报告发布完成（部分图片上传失败）",
+  "message_en": "Competitive product analysis report published (partial image upload failure)",
+  "feishu_url": "https://feishu.cn/docx/TJBnduVpmofKEpxPP6dcRd3Ende",
+  "images_expected": 3,
+  "images_uploaded": 2,
+  "image_failures": [
+    {
+      "item_id": "prod003",
+      "image_url": "https://m.media-amazon.com/images/I/81example.jpg",
+      "reason": "HTTP 404"
+    }
+  ]
+}
