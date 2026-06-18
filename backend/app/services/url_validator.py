@@ -13,9 +13,8 @@ CPIS V1 — URL 合规校验服务
 from __future__ import annotations
 
 import re
-import socket
 import urllib.parse
-from ipaddress import ip_address, ip_network
+from ipaddress import ip_address
 from urllib.robotparser import RobotFileParser
 
 import httpx
@@ -27,25 +26,15 @@ from app.schemas import (
     ValidationErrorCode,
     ValidationStatus,
 )
-
-# ── Private / reserved IP ranges (SSRF protection) ──────────────
-_PRIVATE_NETWORKS = [
-    ip_network("127.0.0.0/8"),       # loopback
-    ip_network("10.0.0.0/8"),        # class A private
-    ip_network("172.16.0.0/12"),     # class B private
-    ip_network("192.168.0.0/16"),    # class C private
-    ip_network("169.254.0.0/16"),    # link-local
-    ip_network("0.0.0.0/8"),         # current network
-    ip_network("100.64.0.0/10"),     # carrier-grade NAT
-    ip_network("198.18.0.0/15"),     # benchmark testing
-]
-
-# Cloud metadata endpoints (must never be reachable)
-_CLOUD_METADATA_HOSTS = {
-    "169.254.169.254",   # AWS/GCP/Azure
-    "metadata.google.internal",
-    "100.100.100.200",   # Alibaba Cloud
-}
+from app.security.safe_url import (
+    _is_private_ip as _safe_is_private_ip,
+)
+from app.security.safe_url import (
+    _resolve_to_ips as _safe_resolve_to_ips,
+)
+from app.security.safe_url import (
+    check_url_safe,
+)
 
 # Tracking parameters to strip
 _TRACKING_PARAMS = {
@@ -240,64 +229,38 @@ def _clean_query(query: str) -> str:
 async def _check_ssrf(parsed: urllib.parse.ParseResult) -> str | None:
     """Check for SSRF / private IP access.
 
+    Delegates to ``check_url_safe()`` from ``app.security.safe_url``.
+
     Returns an error message string if blocked, or None if allowed.
     """
-    hostname = parsed.hostname or ""
-
-    # Check cloud metadata endpoints by hostname
-    if hostname.lower() in _CLOUD_METADATA_HOSTS:
-        return f"Access to cloud metadata endpoint is forbidden: {hostname}"
-
-    # Check if hostname is localhost
-    if hostname.lower() in ("localhost", "localhost.localdomain", "127.0.0.1", "::1", "0.0.0.0"):
-        return "Access to localhost is forbidden"
-
-    # Check if hostname is a bare IP
-    try:
-        addr = ip_address(hostname)
-        if _is_private_ip(addr):
-            return f"Access to private IP is forbidden: {hostname}"
-        return None  # It's a public IP — no DNS resolution needed
-    except ValueError:
-        pass  # Not a bare IP, resolve below
-
-    # Resolve hostname to IP addresses
-    try:
-        addrinfo = await _resolve_hostname(hostname)
-    except Exception as e:
-        return f"DNS resolution failed: {e}"
-
-    for addr in addrinfo:
-        if _is_private_ip(addr):
-            return f"Resolved to private IP ({addr}) — access forbidden: {hostname}"
-
+    url = urllib.parse.urlunparse(parsed)
+    result = await check_url_safe(url)
+    if not result.safe:
+        return result.reason
     return None
 
 
 def _is_private_ip(addr) -> bool:
-    """Check if an IP address belongs to a private/reserved range."""
-    return any(addr in network for network in _PRIVATE_NETWORKS)
+    """Check if an IP address belongs to a private/reserved range.
+
+    Delegates to ``app.security.safe_url._is_private_ip``.
+    """
+    return _safe_is_private_ip(addr)
 
 
 async def _resolve_hostname(hostname: str) -> list:
-    """Resolve a hostname to a list of IP addresses."""
-    # Use a thread pool to avoid blocking the event loop
-    import asyncio
-    loop = asyncio.get_running_loop()
-    try:
-        addrinfo = await loop.run_in_executor(
-            None, socket.getaddrinfo, hostname, 80,
-        )
-        seen = set()
-        result = []
-        for info in addrinfo:
-            ip = ip_address(info[4][0])
-            if ip not in seen:
-                seen.add(ip)
-                result.append(ip)
-        return result
-    except socket.gaierror as e:
-        raise Exception(f"Cannot resolve hostname: {e}") from e
+    """Resolve a hostname to a list of IP addresses.
+
+    Delegates to ``app.security.safe_url._resolve_to_ips``.
+    """
+    ips = await _safe_resolve_to_ips(hostname)
+    result = []
+    for ip_str in ips:
+        try:
+            result.append(ip_address(ip_str))
+        except ValueError:
+            continue
+    return result
 
 
 async def _head_with_redirects(
@@ -336,15 +299,10 @@ async def _head_with_redirects(
                     break
                 current_url = urllib.parse.urljoin(current_url, location)
 
-                # Validate the redirect target
-                target_parsed = _parse_url(current_url)
-                if target_parsed is None:
-                    return None
-                if _validate_scheme(target_parsed):
-                    return None  # Redirect to non-http scheme — block
-                ssrf_error = await _check_ssrf(target_parsed)
-                if ssrf_error:
-                    return None  # Redirect to private IP — block
+                # Validate the redirect target via safe_url
+                safe_result = await check_url_safe(current_url)
+                if not safe_result.safe:
+                    return None  # Redirect to unsafe target — block
 
                 redirect_count += 1
             else:

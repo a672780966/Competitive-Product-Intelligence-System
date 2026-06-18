@@ -9,11 +9,12 @@ High-level operations for Feishu多维表格 (Bitable):
 
 from __future__ import annotations
 
+from datetime import UTC
 from typing import Any
 
 from app.core import get_settings
 from app.core.logging import get_logger
-from app.integrations.feishu_client import FeishuClient, FeishuApiError
+from app.integrations.feishu_client import FeishuApiError, FeishuClient
 from app.integrations.field_mapping import build_feishu_record
 
 logger = get_logger(__name__)
@@ -53,8 +54,8 @@ class FeishuBitable:
         existing = await self._search_by_unique_key(unique_key)
 
         # 2. Build the Feishu record fields
-        from datetime import datetime, timezone
-        collected_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        from datetime import datetime
+        collected_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
         fields = build_feishu_record(
             structured_data, analysis_data, unique_key,
             version_no, source_url, collected_at=collected_at,

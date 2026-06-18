@@ -44,15 +44,19 @@ class ReviewStatus(str, enum.Enum):
 
 
 class ProductCategory(str, enum.Enum):
-    """High-level product categories."""
+    """High-level product categories matching the business domain.
 
-    SMARTPHONE = "smartphone"
-    LAPTOP = "laptop"
-    TABLET = "tablet"
+    Categories aligned with the product team's existing classification:
+    TENS, EMS, beauty devices, shaping belts, massage devices.
+    """
+
+    TENS = "tens"
+    EMS = "ems"
+    BEAUTY_DEVICE = "beauty_device"
+    SHAPING_BELT = "shaping_belt"
+    MASSAGE_DEVICE = "massage_device"
     WEARABLE = "wearable"
-    AUDIO = "audio"
-    ACCESSORY = "accessory"
-    SMART_HOME = "smart_home"
+    HEALTH_DEVICE = "health_device"
     OTHER = "other"
 
 
@@ -68,6 +72,7 @@ class SyncStatus(str, enum.Enum):
 class TaskStage(str, enum.Enum):
     """Stages within a collection task pipeline."""
 
+    CREATION = "creation"
     VALIDATION = "validation"
     COLLECTION = "collection"
     CLEANING = "cleaning"
@@ -75,3 +80,6 @@ class TaskStage(str, enum.Enum):
     REVIEW = "review"
     SYNC = "sync"
     REPORT = "report"
+    RETRY = "retry"
+    CANCELLATION = "cancellation"
+    PIPELINE = "pipeline"

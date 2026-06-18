@@ -63,8 +63,16 @@ class Settings(BaseSettings):
     # --- Review ---
     REVIEW_CONFIDENCE_THRESHOLD: float = 0.7
 
+    # --- Auth ---
+    SECRET_KEY: str = ""  # Must be set in production
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
 
-@lru_cache()
+
+@lru_cache
 def get_settings() -> Settings:
     """Return a cached singleton Settings instance."""
     return Settings()

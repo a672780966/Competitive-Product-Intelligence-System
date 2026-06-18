@@ -9,18 +9,15 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.core.database import get_db
-from app.integrations.feishu_client import FeishuClient, FeishuApiError
 from app.integrations.feishu_bitable import FeishuBitable
+from app.integrations.feishu_client import FeishuApiError, FeishuClient
 from app.integrations.field_mapping import build_feishu_record
-from app.models import Base, FeishuSyncRecord, Product, ProductVersion
+from app.models import Base, Product, ProductVersion
 from app.models.enums import SyncStatus
-
 
 # ══════════════════════════════════════════════════════════════════
 # Field mapping
@@ -74,10 +71,10 @@ class TestFieldMapping:
         assert "399" in record["价格信息"]
 
     def test_join_list_fields(self):
-        sd = {"features": ["A", "B", "C"]}
+        sd = {"core_benefits": ["A", "B", "C"]}
         record = build_feishu_record(sd, {}, "k", 1, "")
-        assert "A" in record["功能列表"]
-        assert "B" in record["功能列表"]
+        assert "A" in record["核心卖点"]
+        assert "B" in record["核心卖点"]
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -115,6 +112,7 @@ class TestFeishuClient:
         # Mock API call
         mock_api_resp = MagicMock()
         mock_api_resp.json.return_value = {"code": 0, "data": {"result": "ok"}}
+        mock_api_resp.headers = {"content-type": "application/json"}
         mock_client = AsyncMock()
         mock_client.post.return_value = mock_token_resp
         mock_client.request.return_value = mock_api_resp
@@ -128,6 +126,7 @@ class TestFeishuClient:
     async def test_request_api_error(self, mock_client_cls):
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"code": 190001, "msg": "Record not found"}
+        mock_resp.headers = {"content-type": "application/json"}
         mock_client = AsyncMock()
         mock_client.post.return_value = MagicMock()  # token
         mock_client.post.return_value.json.return_value = {

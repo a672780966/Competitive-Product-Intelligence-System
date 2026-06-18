@@ -13,17 +13,14 @@ Pipeline:
 from __future__ import annotations
 
 import hashlib
-import json
-import re
 import urllib.parse
 from dataclasses import dataclass, field
-from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup, Tag
 
-from app.core.logging import get_logger
-from app.cleaners.jsonld_extractor import extract_jsonld
 from app.cleaners.candidate_extractor import extract_candidates
+from app.cleaners.jsonld_extractor import extract_jsonld
+from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -202,6 +199,13 @@ def _to_markdown(soup: BeautifulSoup, page_url: str = "") -> str:
             elif tag_name in ("p", "td", "th"):
                 lines.append(text)
                 lines.append("")
+            elif tag_name == "a":
+                href = tag.get("href", "")
+                if href and page_url:
+                    href = urllib.parse.urljoin(page_url, href)
+                if text != href:
+                    lines.append(f"[{text}]({href})" if href else text)
+                    lines.append("")
             elif tag_name == "img":
                 alt = tag.get("alt", "")
                 src = tag.get("src", "")

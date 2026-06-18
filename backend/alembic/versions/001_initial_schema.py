@@ -18,16 +18,17 @@ Revises: None
 Create Date: 2026-06-12
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 revision: str = "001_initial_schema"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -42,6 +43,7 @@ def upgrade() -> None:
         sa.Column("priority", sa.Integer(), nullable=False, server_default=sa.text("50")),
         sa.Column("category_hint", sa.String(64), nullable=True),
         sa.Column("language_hint", sa.String(16), nullable=True),
+        sa.Column("auto_sync_feishu", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("retry_count", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("max_retries", sa.Integer(), nullable=False, server_default=sa.text("3")),
         sa.Column("error_code", sa.String(64), nullable=True),
@@ -115,6 +117,11 @@ def upgrade() -> None:
         sa.Column("overall_confidence", sa.Float(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
+    op.create_unique_constraint(
+        "uq_product_version_number",
+        "product_versions",
+        ["product_id", "version_no"],
+    )
 
     # --- product_evidences ---
     op.create_table(
@@ -139,7 +146,8 @@ def upgrade() -> None:
         sa.Column("reviewer", sa.String(128), nullable=True),
         sa.Column("decision", sa.String(32), nullable=False),
         sa.Column("comments", sa.Text(), nullable=True),
-        sa.Column("corrections", sa.String(2048), nullable=True),
+        sa.Column("corrections", postgresql.JSONB(), nullable=True),
+        sa.Column("changed_fields", postgresql.JSONB(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
@@ -180,9 +188,17 @@ def upgrade() -> None:
         sa.Column("action", sa.String(64), nullable=False, index=True),
         sa.Column("resource_type", sa.String(64), nullable=True),
         sa.Column("resource_id", sa.String(128), nullable=True),
-        sa.Column("detail", sa.Text(), nullable=True),
+        sa.Column("detail", postgresql.JSONB(), nullable=True),
         sa.Column("ip_address", sa.String(45), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+    )
+
+    # --- Constraints requiring all tables to exist ---
+    op.create_foreign_key(
+        "fk_product_current_version",
+        "products", "product_versions",
+        ["current_version_id"], ["id"],
+        use_alter=True,
     )
 
 

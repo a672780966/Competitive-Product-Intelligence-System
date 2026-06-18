@@ -8,15 +8,14 @@ Tracks sync status in ``feishu_sync_records`` table.
 from __future__ import annotations
 
 import uuid
-
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.integrations.feishu_bitable import FeishuBitable
 from app.integrations.feishu_client import FeishuApiError
-from app.models import FeishuSyncRecord, Product, ProductVersion
+from app.models import FeishuSyncRecord, Product
 from app.models.enums import SyncStatus
 from app.repositories.product_repository import ProductRepository
 
@@ -73,7 +72,7 @@ class FeishuSyncService:
             feishu_record_id = result["record_id"]
             sync.sync_status = SyncStatus.SUCCESS.value
             sync.feishu_record_id = feishu_record_id
-            sync.synced_at = datetime.now(timezone.utc)
+            sync.synced_at = datetime.now(UTC)
             product.feishu_record_id = feishu_record_id
             await self._db.flush()
 

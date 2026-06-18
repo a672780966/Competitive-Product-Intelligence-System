@@ -15,6 +15,8 @@ import json
 
 import pytest
 
+from app.extractors.product_extractor import ProductExtractor
+from app.prompts import EXTRACT_PRODUCT_SYSTEM_PROMPT, build_extraction_prompt
 from app.schemas.extraction import (
     ExtractionInput,
     ExtractionResult,
@@ -22,9 +24,6 @@ from app.schemas.extraction import (
     ProductAnalysisFields,
     ProductFactFields,
 )
-from app.prompts import build_extraction_prompt, EXTRACT_PRODUCT_SYSTEM_PROMPT
-from app.extractors.product_extractor import ProductExtractor
-
 
 # ══════════════════════════════════════════════════════════════════
 # Schema tests

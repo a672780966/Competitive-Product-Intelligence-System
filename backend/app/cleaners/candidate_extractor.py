@@ -12,6 +12,10 @@ from typing import Any
 
 from bs4 import BeautifulSoup, Tag
 
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
 # ── Price patterns ──────────────────────────────────────────────
 _PRICE_PATTERN = re.compile(
     r"(?:[\$€£¥₩₹₽₺₴₦₱₿])\s*([0-9]{1,6}(?:[.,][0-9]{1,2})?)"
@@ -77,27 +81,77 @@ def extract_candidates(
         if not any(p["raw"] == price_candidate["raw"] for p in prices):
             prices.append(price_candidate)
 
-    # Brand from meta / common selectors
-    for tag in soup.find_all(["meta", "link", "span", "div", "a"]):
+    # Brand from meta / common selectors — 扩大搜索范围，使用更灵活的模式
+    for tag in soup.find_all(True):  # ✅ 搜索所有标签，而不仅仅是特定几个
         if not isinstance(tag, Tag):
             continue
-        # Check itemprop or class for "brand" keyword (NOT the content value)
-        itemprop = tag.get("itemprop", "")
-        classes = " ".join(tag.get("class", [])) if isinstance(tag.get("class"), list) else str(tag.get("class", ""))
-        if "brand" in str(itemprop).lower() or "brand" in classes.lower():
-            text = (tag.get("content", "") or tag.get_text(strip=True))
-            if text and text not in brands:
-                brands.append(text)
 
-    # Model from itemprop or data attributes
+        # ✅ 检查多种属性模式
+        itemprop = tag.get("itemprop", "")
+        data_brand = tag.get("data-brand", "")
+        data_product_brand = tag.get("data-product-brand", "")
+        classes = " ".join(tag.get("class", [])) if isinstance(tag.get("class"), list) else str(tag.get("class", ""))
+
+        # ✅ 检查属性名是否包含 "brand"（小写比较）
+        attr_has_brand = (
+            "brand" in str(itemprop).lower()
+            or "brand" in classes.lower()
+            or (data_brand and data_brand.strip() != "")
+            or (data_product_brand and data_product_brand.strip() != "")
+        )
+
+        if attr_has_brand:
+            # ✅ 尝试多个位置获取品牌名称
+            text = (
+                tag.get("content", "")
+                or data_brand
+                or data_product_brand
+                or tag.get("title", "")
+                or tag.get("alt", "")
+                or tag.get_text(strip=True)
+            )
+
+            # ✅ 正确的验证逻辑
+            if text and isinstance(text, str) and text.strip():
+                text = text.strip()
+                if text not in brands and len(text) > 1:  # 过滤单个字符
+                    brands.append(text)
+                    logger.debug("brand_extracted", value=text, source="html_itemprop")
+
+    # ✅ 从页面文本中额外提取品牌（弥补结构化标记缺失）
+    _extract_brands_from_text(page_text, brands)
+
+    # Model from itemprop or data attributes — 扩展属性支持
     for tag in soup.find_all(True):
         if not isinstance(tag, Tag):
             continue
+
         itemprop = tag.get("itemprop", "")
-        if itemprop and "model" in str(itemprop).lower():
-            text = tag.get("content", "") or tag.get_text(strip=True)
-            if text and text not in models:
-                models.append(text)
+        data_model = tag.get("data-model", "")
+        data_product_model = tag.get("data-product-model", "")
+        data_sku = tag.get("data-sku", "")
+
+        attr_has_model = (
+            "model" in str(itemprop).lower()
+            or (data_model and data_model.strip() != "")
+            or (data_product_model and data_product_model.strip() != "")
+            or (data_sku and data_sku.strip() != "")
+        )
+
+        if attr_has_model:
+            text = (
+                tag.get("content", "")
+                or data_model
+                or data_product_model
+                or data_sku
+                or tag.get_text(strip=True)
+            )
+
+            if text and isinstance(text, str) and text.strip():
+                text = text.strip()
+                if text not in models and len(text) > 1:
+                    models.append(text)
+                    logger.debug("model_extracted", value=text, source="html_itemprop")
 
     return {
         "prices": prices[:10],   # at most 10 price candidates
@@ -107,7 +161,10 @@ def extract_candidates(
 
 
 def _extract_jsonld_prices(block: dict, prices: list[dict]) -> None:
-    """Extract price info from a JSON-LD block."""
+    """Extract price info from a JSON-LD block.
+
+    正确处理价格为 0 的情况（使用 is not None 而非 truthy 检查）。
+    """
     # Direct offers
     for field in ("offers", "hasOffers", "makesOffer"):
         offers = block.get(field)
@@ -119,23 +176,48 @@ def _extract_jsonld_prices(block: dict, prices: list[dict]) -> None:
                 if raw_price is None:
                     spec = offer.get("priceSpecification")
                     raw_price = spec.get("price") if isinstance(spec, dict) else None
-                currency = offer.get("priceCurrency", "")
-                if raw_price is not None:
-                    prices.append({
-                        "raw": f"{currency} {raw_price}",
-                        "value": str(raw_price),
-                        "currency": currency,
-                        "source": "jsonld",
-                    })
 
-    # Direct price
+                # ✅ 使用 is not None，允许价格为 0
+                if raw_price is not None:
+                    currency = offer.get("priceCurrency", "")
+                    try:
+                        price_value = float(raw_price) if isinstance(raw_price, str) else float(raw_price)
+                        # ✅ 允许 0 及以上的价格，拒绝负价格
+                        if price_value >= 0:
+                            prices.append({
+                                "raw": f"{currency} {raw_price}".strip(),
+                                "value": str(price_value),
+                                "currency": currency,
+                                "source": "jsonld",
+                            })
+                            logger.debug(
+                                "jsonld_price_extracted",
+                                value=price_value,
+                                currency=currency,
+                                source="offer",
+                            )
+                    except (ValueError, TypeError) as exc:
+                        logger.warning(
+                            "jsonld_price_conversion_failed",
+                            raw_price=raw_price,
+                            error=str(exc),
+                        )
+                        continue
+
+    # Direct price — ✅ 允许 0
     price = block.get("price")
-    if isinstance(price, (int, float, str)):
-        prices.append({
-            "raw": str(price),
-            "value": str(price),
-            "source": "jsonld",
-        })
+    if price is not None and isinstance(price, (int, float, str)):
+        try:
+            price_value = float(price) if isinstance(price, str) else float(price)
+            if price_value >= 0:
+                prices.append({
+                    "raw": str(price),
+                    "value": str(price_value),
+                    "source": "jsonld",
+                })
+                logger.debug("direct_price_extracted", value=price_value, source="direct")
+        except (ValueError, TypeError) as exc:
+            logger.warning("direct_price_conversion_failed", raw_price=price, error=str(exc))
 
 
 def _extract_jsonld_brand(block: dict, brands: list[str]) -> None:
@@ -161,3 +243,28 @@ def _extract_jsonld_model(block: dict, models: list[str]) -> None:
         val = block.get(field)
         if val and isinstance(val, str) and val not in models:
             models.append(val)
+
+
+def _extract_brands_from_text(page_text: str, brands: list[str]) -> None:
+    """从页面文本中提取常见品牌名称（启发式方法）。
+
+    弥补结构化标记缺失时的空白。
+    """
+    # 常见品牌列表（可根据业务扩展）
+    common_brands = {
+        "apple", "microsoft", "google", "amazon", "meta", "tesla",
+        "samsung", "lg", "sony", "panasonic", "pioneer",
+        "nike", "adidas", "puma", "reebok", "jordan",
+        "coca-cola", "pepsi", "red-bull",
+        "dell", "hp", "lenovo", "asus", "acer",
+        # 中文品牌
+        "华为", "小米", "oppo", "vivo", "荣耀",
+        "阿里巴巴", "腾讯", "百度", "美团", "滴滴",
+    }
+
+    # 在页面文本中查找品牌提及
+    page_lower = page_text.lower()
+    for brand in common_brands:
+        if brand in page_lower and brand not in brands:
+            brands.append(brand)
+            logger.debug("brand_extracted_from_text", value=brand, source="heuristic")

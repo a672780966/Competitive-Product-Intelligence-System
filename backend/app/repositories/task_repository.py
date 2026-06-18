@@ -7,7 +7,7 @@ Provides CRUD operations on ``CollectionTask`` and ``TaskEvent`` models.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -114,9 +114,9 @@ class TaskRepository:
             values["error_message"] = error_message
 
         if status in (TaskStatus.FETCHING,):
-            values["started_at"] = datetime.now(timezone.utc)
+            values["started_at"] = datetime.now(UTC)
         if status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.PARTIAL_SUCCESS):
-            values["finished_at"] = datetime.now(timezone.utc)
+            values["finished_at"] = datetime.now(UTC)
 
         stmt = (
             update(CollectionTask)

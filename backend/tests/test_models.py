@@ -6,10 +6,8 @@ and the initial Alembic migration.
 
 from __future__ import annotations
 
-import uuid
-
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.models import (
@@ -18,17 +16,17 @@ from app.models import (
     CollectionTask,
     FeishuSyncRecord,
     Product,
+    ProductCategory,
     ProductEvidence,
     ProductVersion,
     PromptTemplate,
     ReviewRecord,
+    ReviewStatus,
     SourceSnapshot,
+    SyncStatus,
     TaskEvent,
     TaskPriority,
     TaskStatus,
-    ProductCategory,
-    ReviewStatus,
-    SyncStatus,
 )
 
 
@@ -155,7 +153,7 @@ async def test_create_product(db_session: AsyncSession) -> None:
         brand="Apple",
         name="iPhone 15 Pro",
         model="A3104",
-        category=ProductCategory.SMARTPHONE,
+        category=ProductCategory.WEARABLE,
     )
     db_session.add(product)
     await db_session.commit()
@@ -344,7 +342,7 @@ async def test_cascade_delete_task_events(db_session: AsyncSession) -> None:
     await db_session.commit()
 
     # Verify no events remain
-    from sqlalchemy import select, func
+    from sqlalchemy import func, select
     result = await db_session.execute(select(func.count()).select_from(TaskEvent))
     assert result.scalar() == 0
 

@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.models import Base, Product, ProductVersion, ProductEvidence
+from app.models import Base
 from app.models.enums import ReviewStatus
 from app.repositories.product_repository import ProductRepository
 from app.schemas.extraction import (
@@ -24,11 +24,9 @@ from app.schemas.extraction import (
 from app.schemas.task import TaskResponse
 from app.services.product_service import (
     ProductVersioningService,
-    _make_unique_key,
     _extract_domain,
-    _resolve_category,
+    _make_unique_key,
 )
-
 
 # ══════════════════════════════════════════════════════════════════
 # Fixtures

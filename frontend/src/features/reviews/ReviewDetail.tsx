@@ -1,6 +1,6 @@
 // CPIS V1 — 人工复核详情页 (左右对照面板)
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Card, Descriptions, Tag, Button, Space, Spin, Input, Divider, message, Progress,

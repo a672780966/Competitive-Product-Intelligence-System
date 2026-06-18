@@ -51,9 +51,12 @@ services:
   migrate:
     <<: *backend-defaults
     command: alembic upgrade head
-    restart: no
-    profiles:
-      - setup
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # --- FastAPI Backend ---
   backend:

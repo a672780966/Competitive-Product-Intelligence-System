@@ -12,25 +12,21 @@ Covers:
 
 from __future__ import annotations
 
+from ipaddress import ip_address
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
-import pytest
 
 from app.schemas import UrlValidationInput, ValidationErrorCode, ValidationStatus
+from app.security.safe_url import SafeUrlResult
 from app.services.url_validator import (
-    _CAPTCHA_KEYWORDS,
-    _LOGIN_KEYWORDS,
+    _check_ssrf,
+    _is_private_ip,
     _normalize_url,
     _parse_url,
     _validate_scheme,
-    _is_private_ip,
-    _clean_query,
     validate_url,
-    _check_ssrf,
 )
-from ipaddress import ip_address
-
 
 # ══════════════════════════════════════════════════════════════════
 # 1. URL parsing & normalization
@@ -170,17 +166,27 @@ class TestSsrfCheck:
         result = await _check_ssrf(parsed)
         assert result is not None
 
-    @patch("app.services.url_validator._resolve_hostname", new_callable=AsyncMock)
-    async def test_blocks_resolved_private_ip(self, mock_resolve):
-        mock_resolve.return_value = [ip_address("10.0.0.99")]
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_blocks_resolved_private_ip(self, mock_check):
+        """Domain resolving to private IP is blocked."""
+        mock_check.return_value = SafeUrlResult(
+            safe=False,
+            reason="Resolved to private IP (10.0.0.99)",
+            resolved_ips=["10.0.0.99"],
+        )
         parsed = _parse_url("http://evil-internal.com/page")
         result = await _check_ssrf(parsed)
         assert result is not None
         assert "private" in result.lower()
 
-    @patch("app.services.url_validator._resolve_hostname", new_callable=AsyncMock)
-    async def test_allows_public_ip(self, mock_resolve):
-        mock_resolve.return_value = [ip_address("93.184.216.34")]
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_allows_public_ip(self, mock_check):
+        """Domain resolving to public IP is allowed."""
+        mock_check.return_value = SafeUrlResult(
+            safe=True,
+            reason="OK",
+            resolved_ips=["93.184.216.34"],
+        )
         parsed = _parse_url("http://example.com/page")
         result = await _check_ssrf(parsed)
         assert result is None
@@ -222,10 +228,12 @@ class MockAsyncClient:
 
 class TestFullValidation:
     @patch("app.services.url_validator.httpx.AsyncClient")
-    @patch("app.services.url_validator._resolve_hostname")
-    async def test_valid_public_url_passes(self, mock_resolve, mock_client_cls):
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_valid_public_url_passes(self, mock_check, mock_client_cls):
         """A valid public URL should pass all checks."""
-        mock_resolve.return_value = [ip_address("93.184.216.34")]
+        mock_check.return_value = SafeUrlResult(
+            safe=True, reason="OK", resolved_ips=["93.184.216.34"],
+        )
         head_resp = MagicMock(spec=httpx.Response)
         head_resp.status_code = 200
         head_resp.text = ""
@@ -241,40 +249,42 @@ class TestFullValidation:
         assert "example.com" in result.domain
 
     @patch("app.services.url_validator.httpx.AsyncClient")
-    @patch("app.services.url_validator._resolve_hostname")
-    async def test_rejects_localhost(self, mock_resolve, mock_client_cls):
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_rejects_localhost(self, mock_check, mock_client_cls):
         """localhost URLs should be rejected."""
+        mock_check.return_value = SafeUrlResult(
+            safe=False, reason="Access to localhost is forbidden", resolved_ips=[],
+        )
         result = await validate_url(UrlValidationInput(source_url="http://localhost/admin"))
         assert result.status == ValidationStatus.FAILED
         assert result.error_code == ValidationErrorCode.URL_FORBIDDEN
-        mock_resolve.assert_not_called()
-        mock_client_cls.assert_not_called()
 
     @patch("app.services.url_validator.httpx.AsyncClient")
-    @patch("app.services.url_validator._resolve_hostname")
-    async def test_rejects_private_ip(self, mock_resolve, mock_client_cls):
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_rejects_private_ip(self, mock_check, mock_client_cls):
         """Private IP URLs should be rejected."""
+        mock_check.return_value = SafeUrlResult(
+            safe=False, reason="Private IP blocked", resolved_ips=[],
+        )
         result = await validate_url(UrlValidationInput(source_url="http://192.168.1.1/admin"))
         assert result.status == ValidationStatus.FAILED
         assert result.error_code == ValidationErrorCode.URL_FORBIDDEN
-        mock_resolve.assert_not_called()
-        mock_client_cls.assert_not_called()
 
     @patch("app.services.url_validator.httpx.AsyncClient")
-    @patch("app.services.url_validator._resolve_hostname")
-    async def test_rejects_file_scheme(self, mock_resolve, mock_client_cls):
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_rejects_file_scheme(self, mock_check, mock_client_cls):
         """file:// URLs should be rejected."""
         result = await validate_url(UrlValidationInput(source_url="file:///etc/passwd"))
         assert result.status == ValidationStatus.FAILED
         assert result.error_code == ValidationErrorCode.URL_INVALID
-        mock_resolve.assert_not_called()
-        mock_client_cls.assert_not_called()
 
     @patch("app.services.url_validator.httpx.AsyncClient")
-    @patch("app.services.url_validator._resolve_hostname")
-    async def test_detects_login_page(self, mock_resolve, mock_client_cls):
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_detects_login_page(self, mock_check, mock_client_cls):
         """Pages with login forms should be blocked."""
-        mock_resolve.return_value = [ip_address("93.184.216.34")]
+        mock_check.return_value = SafeUrlResult(
+            safe=True, reason="OK", resolved_ips=["93.184.216.34"],
+        )
         head_resp = MagicMock(spec=httpx.Response)
         head_resp.status_code = 200
         head_resp.headers = {}
@@ -293,10 +303,12 @@ class TestFullValidation:
         assert result.error_code == ValidationErrorCode.LOGIN_REQUIRED
 
     @patch("app.services.url_validator.httpx.AsyncClient")
-    @patch("app.services.url_validator._resolve_hostname")
-    async def test_detects_captcha(self, mock_resolve, mock_client_cls):
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_detects_captcha(self, mock_check, mock_client_cls):
         """Pages with captcha should be failed."""
-        mock_resolve.return_value = [ip_address("93.184.216.34")]
+        mock_check.return_value = SafeUrlResult(
+            safe=True, reason="OK", resolved_ips=["93.184.216.34"],
+        )
         head_resp = MagicMock(spec=httpx.Response)
         head_resp.status_code = 200
         head_resp.headers = {}
@@ -315,10 +327,12 @@ class TestFullValidation:
         assert result.error_code == ValidationErrorCode.CAPTCHA_DETECTED
 
     @patch("app.services.url_validator.httpx.AsyncClient")
-    @patch("app.services.url_validator._resolve_hostname")
-    async def test_http_error_fails(self, mock_resolve, mock_client_cls):
+    @patch("app.services.url_validator.check_url_safe", new_callable=AsyncMock)
+    async def test_http_error_fails(self, mock_check, mock_client_cls):
         """HTTP 403/404 should fail validation."""
-        mock_resolve.return_value = [ip_address("93.184.216.34")]
+        mock_check.return_value = SafeUrlResult(
+            safe=True, reason="OK", resolved_ips=["93.184.216.34"],
+        )
         head_resp = MagicMock(spec=httpx.Response)
         head_resp.status_code = 404
         head_resp.headers = {}

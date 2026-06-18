@@ -36,4 +36,5 @@ class FeishuSyncRecord(Base):
     synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     def __repr__(self) -> str:
-        return f"<FeishuSyncRecord {self.id} {self.sync_status.value}>"
+        status_str = self.sync_status.value if isinstance(self.sync_status, SyncStatus) else str(self.sync_status)
+        return f"<FeishuSyncRecord {self.id} {status_str}>"

@@ -1,6 +1,6 @@
 // CPIS V1 — 待复核列表页面
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Table, Tag, Button, Typography, Select } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";

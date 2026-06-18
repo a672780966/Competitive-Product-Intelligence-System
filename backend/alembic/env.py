@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncGenerator
 
-from alembic import context
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from alembic import context
 from app.core import get_settings
 from app.models import Base  # noqa: F401 — ensure all models are loaded
 

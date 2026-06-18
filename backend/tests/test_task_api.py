@@ -7,17 +7,29 @@ Uses an in-memory SQLite database via dependency override.
 from __future__ import annotations
 
 import uuid
+from ipaddress import ip_address
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.main import app
 from app.models import Base
 
 client = TestClient(app)
+
+
+@pytest.fixture
+async def patch_dns():
+    """Mock DNS resolution to return a public IP for example.com URLs."""
+    from app.services import url_validator
+    with patch.object(url_validator, "_resolve_hostname", new_callable=AsyncMock) as mock:
+        mock.return_value = [ip_address("93.184.216.34")]
+        yield mock
 
 
 @pytest.fixture(scope="module")
@@ -55,7 +67,36 @@ def override_get_db(db_session: AsyncSession):
 
     app.dependency_overrides[get_db] = _override
     yield
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture
+async def override_auth(db_session: AsyncSession):
+    """Override auth to bypass JWT verification during tests."""
+    from app.models.user import Role, User, UserRole
+    # Ensure admin role exists
+    admin_role = Role(name="admin", description="Admin")
+    db_session.add(admin_role)
+    await db_session.flush()
+
+    mock_user = User(
+        id=uuid.uuid4(),
+        username="test_admin",
+        password_hash="$2b$12$dummyhashdummyhashdummyhashdummyhashdummyhashdummyhashdummy",
+        is_active=True,
+    )
+    db_session.add(mock_user)
+    await db_session.flush()
+
+    db_session.add(UserRole(user_id=mock_user.id, role_id=admin_role.id))
+    await db_session.flush()
+    await db_session.refresh(mock_user, ["roles"])
+
+    async def _override():
+        return mock_user
+    app.dependency_overrides[get_current_user] = _override
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -64,8 +105,9 @@ def override_get_db(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("patch_dns")
 class TestTaskService:
-    async def test_create_and_get_task(self, db_session: AsyncSession):
+    async def test_create_and_get_task(self, db_session: AsyncSession, patch_dns):
         from app.schemas.task import CreateTaskRequest
         from app.services.task_service import TaskService
 
@@ -75,14 +117,14 @@ class TestTaskService:
 
         assert task_resp.id is not None
         assert task_resp.source_url == "https://example.com/product"
-        assert task_resp.status in ("pending", "validating", "blocked")  # validation runs
+        assert task_resp.status in ("pending", "validating", "blocked", "failed")
 
         # Get task detail
         detail = await service.get_task(task_resp.id)
         assert detail is not None
         assert detail.source_url == task_resp.source_url
 
-    async def test_list_tasks(self, db_session: AsyncSession):
+    async def test_list_tasks(self, db_session: AsyncSession, patch_dns):
         from app.schemas.task import CreateTaskRequest, TaskListQuery
         from app.services.task_service import TaskService
 
@@ -94,19 +136,18 @@ class TestTaskService:
         assert result.total == 2
         assert len(result.items) == 2
 
-    async def test_cancel_task(self, db_session: AsyncSession):
+    async def test_cancel_task(self, db_session: AsyncSession, patch_dns):
         from app.schemas.task import CreateTaskRequest
         from app.services.task_service import TaskService
 
         service = TaskService(db_session)
         task = await service.create_task(CreateTaskRequest(source_url="https://example.com/p"))
 
-        # After creation, task might be pending or blocked due to URL validation
         detail = await service.cancel_task(task.id)
         assert detail is not None
         assert detail.status == "cancelled"
 
-    async def test_get_events(self, db_session: AsyncSession):
+    async def test_get_events(self, db_session: AsyncSession, patch_dns):
         from app.schemas.task import CreateTaskRequest
         from app.services.task_service import TaskService
 
@@ -115,7 +156,7 @@ class TestTaskService:
 
         events = await service.get_events(task.id)
         assert events is not None
-        assert len(events) >= 1  # At least "creation" event
+        assert len(events) >= 1
         assert events[0].stage == "creation"
 
     async def test_retry_blocked_task(self, db_session: AsyncSession):
@@ -146,6 +187,7 @@ class TestApiSchemaValidation:
 
     def test_create_task_request_rejects_empty_url(self):
         from pydantic import ValidationError
+
         from app.schemas.task import CreateTaskRequest
 
         with pytest.raises(ValidationError):
@@ -162,6 +204,7 @@ class TestApiSchemaValidation:
 
     def test_batch_request_rejects_empty(self):
         from pydantic import ValidationError
+
         from app.schemas.task import BatchCreateTaskRequest
 
         with pytest.raises(ValidationError):
@@ -209,7 +252,7 @@ class TestApiSchemaValidation:
 class TestTaskApiIntegration:
     """End-to-end API tests using overridden DB dependency."""
 
-    def test_create_task(self, override_get_db):
+    def test_create_task(self, override_get_db, override_auth):
         resp = client.post("/api/v1/collection-tasks", json={
             "source_url": "https://example.com/product",
             "category_hint": "smartphone",
@@ -220,7 +263,7 @@ class TestTaskApiIntegration:
         assert data["category_hint"] == "smartphone"
         assert "id" in data
 
-    def test_batch_create(self, override_get_db):
+    def test_batch_create(self, override_get_db, override_auth):
         resp = client.post("/api/v1/collection-tasks/batch", json={
             "tasks": [
                 {"source_url": "https://example.com/p1"},
@@ -232,7 +275,7 @@ class TestTaskApiIntegration:
         assert data["created"] == 2
         assert len(data["tasks"]) == 2
 
-    def test_list_and_filter(self, override_get_db):
+    def test_list_and_filter(self, override_get_db, override_auth):
         # Create a task first
         client.post("/api/v1/collection-tasks", json={
             "source_url": "https://example.com/test-product",
@@ -250,7 +293,7 @@ class TestTaskApiIntegration:
         assert resp.status_code == 200
         assert resp.json()["total"] >= 1
 
-    def test_get_task_detail(self, override_get_db):
+    def test_get_task_detail(self, override_get_db, override_auth):
         create_resp = client.post("/api/v1/collection-tasks", json={
             "source_url": "https://example.com/detail-test",
         })
@@ -260,15 +303,15 @@ class TestTaskApiIntegration:
         assert resp.status_code == 200
         assert resp.json()["source_url"] == "https://example.com/detail-test"
 
-    def test_get_task_not_found(self, override_get_db):
+    def test_get_task_not_found(self, override_get_db, override_auth):
         resp = client.get(f"/api/v1/collection-tasks/{uuid.uuid4()}")
         assert resp.status_code == 404
 
-    def test_invalid_uuid_returns_422(self, override_get_db):
+    def test_invalid_uuid_returns_422(self, override_get_db, override_auth):
         resp = client.get("/api/v1/collection-tasks/not-a-uuid")
         assert resp.status_code == 422
 
-    def test_retry_task(self, override_get_db):
+    def test_retry_task(self, override_get_db, override_auth):
         # Create a blocked task (localhost will be blocked by URL validation)
         create_resp = client.post("/api/v1/collection-tasks", json={
             "source_url": "http://localhost/admin",
@@ -280,7 +323,7 @@ class TestTaskApiIntegration:
         data = resp.json()
         assert data["retry_count"] >= 1
 
-    def test_cancel_task(self, override_get_db):
+    def test_cancel_task(self, override_get_db, override_auth):
         create_resp = client.post("/api/v1/collection-tasks", json={
             "source_url": "https://example.com/cancel-me",
         })
@@ -290,7 +333,7 @@ class TestTaskApiIntegration:
         assert resp.status_code == 200
         assert resp.json()["status"] == "cancelled"
 
-    def test_get_task_events(self, override_get_db):
+    def test_get_task_events(self, override_get_db, override_auth):
         create_resp = client.post("/api/v1/collection-tasks", json={
             "source_url": "https://example.com/event-test",
         })

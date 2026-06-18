@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field, field_validator
 
 from app.models.enums import TaskPriority, TaskStatus
-
 
 # ── Request schemas ─────────────────────────────────────────────
 
@@ -42,11 +41,20 @@ class TaskListQuery(BaseModel):
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
 
-    @field_validator("date_from", "date_to")
+    @field_validator("date_from", "date_to", mode="before")
     @classmethod
-    def ensure_timezone(cls, v: datetime | None) -> datetime | None:
-        if v is not None and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
+    def ensure_timezone(cls, v: datetime | str | None) -> datetime | None:
+        if v is None:
+            return v
+        if isinstance(v, datetime):
+            if v.tzinfo is None:
+                return v.replace(tzinfo=UTC)
+            return v
+        if isinstance(v, str):
+            parsed = datetime.fromisoformat(v)
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=UTC)
+            return parsed
         return v
 
 

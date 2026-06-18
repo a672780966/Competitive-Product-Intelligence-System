@@ -10,14 +10,14 @@ Orchestrates task lifecycle operations:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
-from app.models import CollectionTask, AuditLog
+from app.models import AuditLog, CollectionTask
 from app.models.enums import TaskPriority, TaskStatus
 from app.repositories.task_repository import TaskRepository
+from app.schemas import UrlValidationInput
 from app.schemas.task import (
     BatchCreateTaskRequest,
     CreateTaskRequest,
@@ -28,7 +28,6 @@ from app.schemas.task import (
     TaskResponse,
 )
 from app.services.url_validator import validate_url
-from app.schemas import UrlValidationInput
 
 logger = get_logger(__name__)
 
@@ -239,20 +238,61 @@ class TaskService:
                 status=TaskStatus.PENDING,
                 message="URL validation passed — ready for collection",
             )
+            # Dispatch Celery pipeline
+            await self._dispatch_pipeline(task.id)
         else:
-            status = TaskStatus.BLOCKED
+            # ✅ 修复：确定正确的状态（BLOCKED vs FAILED）
+            status = TaskStatus.BLOCKED if result.status.value == "blocked" else TaskStatus.FAILED
+
+            # ✅ 修复：确保 error_code 总是有值（fallback 到默认值）
+            error_code = result.error_code.value if result.error_code else "VALIDATION_FAILED"
+            error_message = result.error_message or f"URL validation {result.status.value}"
+
+            logger.warning(
+                "url_validation_failed",
+                task_id=str(task.id),
+                status=result.status.value,
+                error_code=error_code,
+                error_message=error_message,
+                warnings=result.warnings,
+            )
+
+            # ✅ 无条件更新状态（移除守卫条件）
             await self._repo.update_status(
                 task.id, status,
-                error_code=result.error_code.value if result.error_code else None,
-                error_message=result.error_message,
+                error_code=error_code,
+                error_message=error_message,
             )
+
+            # ✅ 创建事件记录
             await self._repo.create_event(
                 task_id=task.id,
                 stage="validation",
                 status=status,
-                message=result.error_message or "URL validation failed",
-                error_code=result.error_code.value if result.error_code else None,
+                message=error_message,
+                error_code=error_code,
             )
+
+    # ── Pipeline dispatch ────────────────────────────────────────
+
+    async def _dispatch_pipeline(self, task_id: uuid.UUID) -> None:
+        """Dispatch the Celery collection pipeline after validation passes.
+
+        Uses ``run_in_executor`` to avoid blocking the async event loop
+        on the synchronous Celery ``delay()`` call.
+        """
+        try:
+            import asyncio
+
+            from app.tasks.collection import run_collection_pipeline
+
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, run_collection_pipeline.delay, str(task_id),
+            )
+            logger.info("pipeline_dispatched", task_id=str(task_id))
+        except Exception as exc:
+            logger.error("pipeline_dispatch_failed", task_id=str(task_id), error=str(exc))
 
     # ── Mappers ─────────────────────────────────────────────────
 

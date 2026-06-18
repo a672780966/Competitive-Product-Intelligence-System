@@ -7,6 +7,7 @@ Token is cached in-memory to reduce API calls.
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 
@@ -88,19 +89,65 @@ class FeishuClient:
                 method, url, json=json, params=params, headers=headers,
             )
 
+        # ✅ 修复 1：总是先检查 HTTP 状态
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            raise FeishuApiError(exc.response.status_code, exc.response.text[:500])
+            logger.error(
+                "feishu_http_error",
+                path=path,
+                status=exc.response.status_code,
+                response_text=exc.response.text[:500],
+            )
+            raise FeishuApiError(
+                exc.response.status_code,
+                f"HTTP {exc.response.status_code}: {exc.response.text[:200]}",
+            )
 
-        data = response.json()
+        # ✅ 修复 2：检查 Content-Type，确保是 JSON
+        content_type = response.headers.get("content-type", "").lower()
+        if "application/json" not in content_type:
+            logger.error(
+                "feishu_invalid_content_type",
+                path=path,
+                content_type=content_type,
+                response_text=response.text[:500],
+            )
+            raise FeishuApiError(
+                -1,
+                f"Expected JSON response, got {content_type}",
+            )
+
+        # ✅ 修复 3：添加 JSON 解析异常处理
+        try:
+            data = response.json()
+        except json.JSONDecodeError as exc:
+            logger.error(
+                "feishu_json_parse_error",
+                path=path,
+                error=str(exc),
+                response_text=response.text[:500],
+            )
+            raise FeishuApiError(
+                -1,
+                f"Failed to parse JSON response: {str(exc)[:100]}",
+            )
+
+        # ✅ 修复 4：检查 Feishu API 返回的业务错误码
         code = data.get("code", -1)
         msg = data.get("msg", "")
 
         if code != 0:
-            logger.error("feishu_api_error", path=path, code=code, msg=msg)
+            logger.error(
+                "feishu_api_error",
+                path=path,
+                code=code,
+                msg=msg,
+                response=data,
+            )
             raise FeishuApiError(code, msg)
 
+        logger.debug("feishu_request_success", path=path)
         return data
 
     async def _get_token(self) -> FeishuToken:
@@ -112,19 +159,41 @@ class FeishuClient:
             raise FeishuAuthError("Feishu App ID and App Secret must be configured")
 
         url = f"{_FEISHU_BASE}/auth/v3/tenant_access_token/internal"
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.post(url, json={
-                "app_id": self._app_id,
-                "app_secret": self._app_secret,
-            })
-            data = response.json()
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(url, json={
+                    "app_id": self._app_id,
+                    "app_secret": self._app_secret,
+                })
+
+                # ✅ 修复：同样检查 HTTP 状态
+                response.raise_for_status()
+
+                data = response.json()
+        except httpx.HTTPStatusError as exc:
+            logger.error(
+                "feishu_auth_http_error",
+                status=exc.response.status_code,
+                response_text=exc.response.text[:500],
+            )
+            raise FeishuAuthError(f"HTTP {exc.response.status_code} from auth endpoint")
+        except json.JSONDecodeError as exc:
+            logger.error("feishu_auth_json_error", error=str(exc))
+            raise FeishuAuthError(f"Failed to parse auth response: {str(exc)}")
 
         code = data.get("code", -1)
         if code != 0:
-            raise FeishuAuthError(f"Failed to get token: {data.get('msg', '')}")
+            error_msg = data.get("msg", "Unknown error")
+            logger.error("feishu_auth_api_error", code=code, msg=error_msg)
+            raise FeishuAuthError(f"Failed to get token: {error_msg}")
 
         token_str = data.get("tenant_access_token", "")
         expire = data.get("expire", 7200)  # default 7200s
+
+        if not token_str:
+            logger.error("feishu_no_token_in_response", response=data)
+            raise FeishuAuthError("No tenant_access_token in response")
 
         self._token = FeishuToken(
             access_token=token_str,

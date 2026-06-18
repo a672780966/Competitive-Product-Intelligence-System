@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -39,7 +38,7 @@ class Product(Base, TimestampMixin):
     )
 
     # relationships
-    versions: Mapped[list["ProductVersion"]] = relationship(
+    versions: Mapped[list[ProductVersion]] = relationship(
         back_populates="product", cascade="all, delete-orphan",
     )
 

@@ -2,11 +2,21 @@
 
 const BASE = "/api/v1";
 
+/** Build headers with optional auth token injection. */
+function buildHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = localStorage.getItem("cpis_token");
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return { ...headers, ...extra };
+}
+
 // Re-usable request function
 export async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
+    headers: buildHeaders(options?.headers as Record<string, string> | undefined),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -19,6 +29,21 @@ export async function request<T>(url: string, options?: RequestInit): Promise<T>
   }
   return res.json();
 }
+
+/** Generic API helper (auto-injects auth token). */
+export const api = {
+  get: <T>(path: string): Promise<T> => request<T>(path),
+  post: <T>(path: string, body?: unknown): Promise<T> =>
+    request<T>(path, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+  put: <T>(path: string, body?: unknown): Promise<T> =>
+    request<T>(path, {
+      method: "PUT",
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+};
 
 // ── Tasks ──────────────────────────────────────────────────────
 export const tasksApi = {
