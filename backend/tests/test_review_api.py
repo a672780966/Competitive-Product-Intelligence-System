@@ -8,6 +8,7 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -138,6 +139,47 @@ class TestReviewService:
         assert detail.current_review["decision"] == ReviewStatus.IN_REVIEW.value
 
     @pytest.mark.asyncio
+    async def test_review_record_has_corrections(self, db_session: AsyncSession, seeded_db):
+        from app.services.review_service import ReviewService
+        from app.schemas.review import SaveDraftRequest
+        product, version = seeded_db
+        service = ReviewService(db_session)
+
+        await service.save_draft(
+            version.id,
+            SaveDraftRequest(corrections={"brand": "CorrectedBrand"}, comments="Checked"),
+            reviewer="tester",
+        )
+
+        result = await db_session.execute(
+            select(ReviewRecord).where(ReviewRecord.product_version_id == version.id),
+        )
+        review = result.scalar_one()
+        assert review.corrections == {"brand": "CorrectedBrand"}
+
+    @pytest.mark.asyncio
+    async def test_review_record_has_changed_fields(self, db_session: AsyncSession, seeded_db):
+        from app.services.review_service import ReviewService
+        from app.schemas.review import SaveDraftRequest
+        product, version = seeded_db
+        service = ReviewService(db_session)
+
+        await service.save_draft(
+            version.id,
+            SaveDraftRequest(
+                corrections={"brand": "CorrectedBrand", "model": "TM-200"},
+                comments="Checked",
+            ),
+            reviewer="tester",
+        )
+
+        result = await db_session.execute(
+            select(ReviewRecord).where(ReviewRecord.product_version_id == version.id),
+        )
+        review = result.scalar_one()
+        assert review.changed_fields == ["brand", "model"]
+
+    @pytest.mark.asyncio
     async def test_approve_version(self, db_session: AsyncSession, seeded_db):
         from app.services.review_service import ReviewService
         from app.schemas.review import ApproveRequest
@@ -214,6 +256,50 @@ class TestReviewApi:
         assert resp.status_code == 200
         data = resp.json()
         assert data["current_review"]["decision"] == "in_review"
+
+    def test_update_review_corrections(self, override_get_db, seeded_db):
+        product, version = seeded_db
+        client.put(
+            f"/api/v1/reviews/{version.id}/draft",
+            json={"corrections": {"brand": "NewBrand"}, "comments": "Draft"},
+        )
+
+        resp = client.patch(
+            f"/api/v1/reviews/{version.id}",
+            json={"corrections": {"brand": "UpdatedBrand", "model": "TM-200"}},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["current_review"]["corrections"] == {
+            "brand": "UpdatedBrand",
+            "model": "TM-200",
+        }
+        assert data["current_review"]["changed_fields"] == ["brand", "model"]
+
+    def test_update_review_comments(self, override_get_db, seeded_db):
+        product, version = seeded_db
+        client.put(
+            f"/api/v1/reviews/{version.id}/draft",
+            json={"corrections": {"brand": "NewBrand"}, "comments": "Draft"},
+        )
+
+        resp = client.patch(
+            f"/api/v1/reviews/{version.id}",
+            json={"comments": "Updated comment"},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["current_review"]["comments"] == "Updated comment"
+        assert data["current_review"]["corrections"] == {"brand": "NewBrand"}
+
+    def test_update_review_not_found(self, override_get_db):
+        resp = client.patch(
+            f"/api/v1/reviews/{uuid.uuid4()}",
+            json={"comments": "Missing"},
+        )
+        assert resp.status_code == 404
 
     def test_approve(self, override_get_db, seeded_db):
         product, version = seeded_db
