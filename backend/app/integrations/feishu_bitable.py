@@ -85,7 +85,6 @@ class FeishuBitable:
                 "POST",
                 f"/bitable/v1/apps/{self._app_token}/tables/{self._table_id}/records/search",
                 json={
-                    "field_names": ["record_id", "唯一标识"],
                     "filter": {
                         "conjunction": "and",
                         "conditions": [
