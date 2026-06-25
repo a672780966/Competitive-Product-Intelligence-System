@@ -38,6 +38,15 @@ class ProductRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_id_with_versions(self, product_id: uuid.UUID) -> Product | None:
+        """Get a product with versions eagerly loaded."""
+        result = await self._db.execute(
+            select(Product)
+            .where(Product.id == product_id)
+            .options(selectinload(Product.versions)),
+        )
+        return result.scalar_one_or_none()
+
     async def create(self, product: Product) -> Product:
         """Persist a new product."""
         self._db.add(product)

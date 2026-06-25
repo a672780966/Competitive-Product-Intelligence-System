@@ -12,12 +12,9 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models import Product
 from app.repositories.product_repository import ProductRepository
 from app.schemas.product import (
     PaginatedProductResponse,
@@ -63,12 +60,8 @@ async def get_product(
     db: AsyncSession = Depends(get_db),
 ) -> ProductDetailResponse:
     """Get product detail including version history."""
-    result = await db.execute(
-        select(Product)
-        .where(Product.id == product_id)
-        .options(selectinload(Product.versions)),
-    )
-    product = result.scalar_one_or_none()
+    repo = ProductRepository(db)
+    product = await repo.get_by_id_with_versions(product_id)
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     return product

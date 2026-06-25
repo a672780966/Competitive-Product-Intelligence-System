@@ -220,3 +220,36 @@ class TestProductApiIntegration:
         data = resp.json()
         assert data["total"] == 1
         assert data["items"][0]["id"] == str(product.id)
+
+    @pytest.mark.asyncio
+    async def test_filter_by_domain(
+        self,
+        override_get_db,
+        db_session: AsyncSession,
+    ):
+        from app.models import Product
+        from app.models.enums import ReviewStatus
+
+        # Product in example.com domain
+        await create_product(
+            db_session,
+            unique_key="example.com/domain-test",
+            brand="DomainBrand",
+        )
+        # Product in other domain
+        other = Product(
+            unique_key="othersite.com/domain-test",
+            brand="OtherBrand",
+            category="smartphone",
+            review_status=ReviewStatus.PENDING,
+        )
+        db_session.add(other)
+        await db_session.flush()
+
+        resp = client.get("/api/v1/products?domain=example.com")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["unique_key"] == "example.com/domain-test"
+        assert data["items"][0]["brand"] == "DomainBrand"
