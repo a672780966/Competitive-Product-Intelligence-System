@@ -85,6 +85,7 @@ class ReviewDetailResponse(BaseModel):
     current_review: dict | None = None
     cleaned_text: str | None = None
     source_url: str | None = None
+    source_text: str | None = None
 
 
 # ── Mutation requests ───────────────────────────────────────────

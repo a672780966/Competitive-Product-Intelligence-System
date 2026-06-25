@@ -9,6 +9,7 @@ Orchestrates task lifecycle operations:
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import datetime
 
@@ -238,6 +239,15 @@ class TaskService:
                 stage="validation",
                 status=TaskStatus.PENDING,
                 message="URL validation passed — ready for collection",
+            )
+            from app.tasks.collection import collect_url
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, collect_url.delay, str(task.id), task.source_url)
+            await self._repo.create_event(
+                task_id=task.id,
+                stage="enqueue",
+                status=TaskStatus.PENDING,
+                message="Task enqueued for collection",
             )
         else:
             status = TaskStatus.BLOCKED

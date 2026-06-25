@@ -49,7 +49,7 @@ async def get_review_detail(
     version_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> ReviewDetailResponse:
-    """Get full review detail for a product version (left/right panel data)."""
+    """Get full review detail — includes source_text / source_url from SourceSnapshot."""
     service = ReviewService(db)
     result = await service.get_review_detail(version_id)
     if result is None:

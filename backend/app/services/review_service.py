@@ -181,7 +181,8 @@ class ReviewService:
                 "created_at": current_review.created_at.isoformat(),
             } if current_review else None,
             cleaned_text=snapshot.cleaned_text if snapshot else None,
-            source_url=version.product.source_url,
+            source_url=snapshot.final_url if snapshot else version.product.source_url,
+            source_text=snapshot.cleaned_text if snapshot else None,
         )
 
     async def save_draft(
