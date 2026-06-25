@@ -29,9 +29,12 @@ class FeishuBitable:
         self._client = client or FeishuClient()
         settings = get_settings()
         self._app_token = settings.FEISHU_BITABLE_TOKEN
+        self._table_id = settings.FEISHU_TABLE_ID
 
         if not self._app_token:
             logger.warning("feishu_bitable_not_configured", msg="FEISHU_BITABLE_TOKEN not set")
+        if not self._table_id:
+            logger.warning("feishu_bitable_table_not_configured", msg="FEISHU_TABLE_ID not set")
 
     async def upsert_product(
         self,
@@ -80,7 +83,7 @@ class FeishuBitable:
         try:
             data = await self._client.request(
                 "POST",
-                f"/bitable/v1/apps/{self._app_token}/records/search",
+                f"/bitable/v1/apps/{self._app_token}/tables/{self._table_id}/records/search",
                 json={
                     "field_names": ["record_id", "唯一标识"],
                     "filter": {
@@ -89,7 +92,7 @@ class FeishuBitable:
                             {
                                 "field_name": "唯一标识",
                                 "operator": "is",
-                                "value": unique_key,
+                                "value": [unique_key],
                             },
                         ],
                     },
@@ -109,7 +112,7 @@ class FeishuBitable:
         """Create a new record in the bitable."""
         data = await self._client.request(
             "POST",
-            f"/bitable/v1/apps/{self._app_token}/records",
+            f"/bitable/v1/apps/{self._app_token}/tables/{self._table_id}/records",
             json={"fields": fields},
         )
         return data.get("data", {}).get("record", {})
@@ -118,7 +121,7 @@ class FeishuBitable:
         """Update an existing record in the bitable."""
         data = await self._client.request(
             "PUT",
-            f"/bitable/v1/apps/{self._app_token}/records/{record_id}",
+            f"/bitable/v1/apps/{self._app_token}/tables/{self._table_id}/records/{record_id}",
             json={"fields": fields},
         )
         return data.get("data", {}).get("record", {})

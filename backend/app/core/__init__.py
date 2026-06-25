@@ -50,7 +50,8 @@ class Settings(BaseSettings):
     FEISHU_APP_ID: str = ""
     FEISHU_APP_SECRET: str = ""
     FEISHU_BITABLE_TOKEN: str = ""
-
+    FEISHU_TABLE_ID: str = ""
+    FEISHU_VIEW_ID: str = ""
     # --- Collection ---
     COLLECTION_TIMEOUT_SECONDS: int = 60
     COLLECTION_MAX_RETRIES: int = 3
