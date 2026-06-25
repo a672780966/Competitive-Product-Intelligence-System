@@ -39,11 +39,14 @@ class TaskRepository:
         return result.scalar_one_or_none()
 
     async def get_by_id_with_events(self, task_id: uuid.UUID) -> CollectionTask | None:
-        """Get a task with its event history eagerly loaded."""
+        """Get a task with its event history and snapshot eagerly loaded."""
         result = await self._db.execute(
             select(CollectionTask)
             .where(CollectionTask.id == task_id)
-            .options(selectinload(CollectionTask.events)),
+            .options(
+                selectinload(CollectionTask.events),
+                selectinload(CollectionTask.snapshot),
+            ),
         )
         return result.scalar_one_or_none()
 

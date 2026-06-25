@@ -98,6 +98,13 @@ class SaveDraftRequest(BaseModel):
     comments: str | None = None
 
 
+class UpdateReviewRequest(BaseModel):
+    """Partially update the latest review record for a version."""
+
+    corrections: dict | None = None
+    comments: str | None = None
+
+
 class ApproveRequest(BaseModel):
     """Approve a product version."""
 

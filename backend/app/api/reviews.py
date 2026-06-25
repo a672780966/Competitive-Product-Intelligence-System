@@ -4,6 +4,7 @@ CPIS V1 — Human review API routes.
 Endpoints:
   GET   /api/v1/reviews                     — list reviews (paginated)
   GET   /api/v1/reviews/{version_id}        — review detail
+  PATCH /api/v1/reviews/{version_id}        — update latest review record
   PUT   /api/v1/reviews/{version_id}/draft  — save draft
   POST  /api/v1/reviews/{version_id}/approve — approve
   POST  /api/v1/reviews/{version_id}/reject  — reject
@@ -25,6 +26,7 @@ from app.schemas.review import (
     ReviewDetailResponse,
     ReviewListQuery,
     SaveDraftRequest,
+    UpdateReviewRequest,
 )
 from app.services.review_service import ReviewService
 
@@ -54,6 +56,20 @@ async def get_review_detail(
     result = await service.get_review_detail(version_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Version not found")
+    return result
+
+
+@router.patch("/{version_id}", response_model=ReviewDetailResponse)
+async def update_review(
+    version_id: uuid.UUID,
+    body: UpdateReviewRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ReviewDetailResponse:
+    """Update the latest review record for a version."""
+    service = ReviewService(db)
+    result = await service.update_review(version_id, body)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Review not found")
     return result
 
 

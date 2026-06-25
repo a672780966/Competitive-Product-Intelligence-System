@@ -92,10 +92,40 @@ class TaskResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SnapshotResponse(BaseModel):
+    id: uuid.UUID
+    task_id: uuid.UUID
+    final_url: str | None
+    html_hash: str | None
+    content_hash: str | None
+    cleaned_text: str | None
+    cleaned_markdown: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PipelineStageStatus(BaseModel):
+    stage: str
+    status: str
+    error_code: str | None = None
+    error_message: str | None = None
+
+
+class PipelineStatusResponse(BaseModel):
+    stages: list[PipelineStageStatus] = []
+    current_stage: str | None = None
+    overall_status: str
+    retry_count: int = 0
+    max_retries: int = 3
+
+
 class TaskDetailResponse(TaskResponse):
-    """Task detail including event history."""
+    """Task detail including event history, snapshot, and pipeline status."""
 
     events: list[TaskEventResponse] = []
+    snapshot: SnapshotResponse | None = None
+    pipeline_status: PipelineStatusResponse | None = None
 
 
 class PaginatedTaskResponse(BaseModel):

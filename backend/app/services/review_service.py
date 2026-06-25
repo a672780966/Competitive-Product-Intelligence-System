@@ -34,6 +34,7 @@ from app.schemas.review import (
     ReviewItemResponse,
     ReviewListQuery,
     SaveDraftRequest,
+    UpdateReviewRequest,
 )
 
 logger = get_logger(__name__)
@@ -207,6 +208,35 @@ class ReviewService:
         await self._db.flush()
         logger.info("review_draft_saved", version_id=str(version_id))
 
+        return await self.get_review_detail(version_id)
+
+    async def update_review(
+        self, version_id: uuid.UUID, req: UpdateReviewRequest,
+    ) -> ReviewDetailResponse | None:
+        """Update the latest review record for a product version."""
+        version = await self._get_version(version_id)
+        if version is None:
+            return None
+
+        review_result = await self._db.execute(
+            select(ReviewRecord)
+            .where(ReviewRecord.product_version_id == version_id)
+            .order_by(ReviewRecord.created_at.desc())
+            .limit(1),
+        )
+        review = review_result.scalar_one_or_none()
+        if review is None:
+            return None
+
+        fields_set = req.model_fields_set
+        if "comments" in fields_set:
+            review.comments = req.comments
+        if "corrections" in fields_set:
+            review.corrections = req.corrections
+            review.changed_fields = list(req.corrections.keys()) if req.corrections else []
+
+        await self._db.flush()
+        logger.info("review_updated", version_id=str(version_id))
         return await self.get_review_detail(version_id)
 
     async def approve(

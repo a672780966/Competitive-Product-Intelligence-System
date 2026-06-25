@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -69,20 +69,45 @@ class ProductRepository:
     async def list(
         self,
         *,
+        keyword: str | None = None,
+        status: str | None = None,
+        domain: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[Product], int]:
-        """List products with pagination."""
-        count_q = select(func.count(Product.id))
-        total = (await self._db.execute(count_q)).scalar() or 0
+        """List products with optional filters, returns (items, total_count)."""
+        query = select(Product)
+        count_query = select(func.count(Product.id))
 
-        q = (
-            select(Product)
+        conditions = []
+        if status:
+            conditions.append(Product.review_status == status)
+        if domain:
+            conditions.append(Product.unique_key.ilike(f"{domain}/%"))
+        if keyword:
+            pattern = f"%{keyword}%"
+            conditions.append(
+                or_(
+                    Product.brand.ilike(pattern),
+                    Product.name.ilike(pattern),
+                    Product.model.ilike(pattern),
+                ),
+            )
+
+        for cond in conditions:
+            query = query.where(cond)
+            count_query = count_query.where(cond)
+
+        count_result = await self._db.execute(count_query)
+        total = count_result.scalar() or 0
+
+        query = (
+            query
             .order_by(Product.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
-        result = await self._db.execute(q)
+        result = await self._db.execute(query)
         return list(result.scalars().all()), total
 
     # ── ProductVersion ──────────────────────────────────────────

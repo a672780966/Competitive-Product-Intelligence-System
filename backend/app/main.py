@@ -8,8 +8,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router as health_router
+from app.api.products import router as products_router
 from app.api.reports import router as reports_router
 from app.api.reviews import router as reviews_router
+from app.api.sync import router as sync_router
 from app.api.tasks import router as tasks_router
 from app.core import get_settings
 from app.core.exceptions import register_exception_handlers
@@ -58,6 +60,8 @@ def create_app() -> FastAPI:
     app.include_router(tasks_router)
     app.include_router(reviews_router)
     app.include_router(reports_router)
+    app.include_router(products_router)
+    app.include_router(sync_router)
 
     @app.get("/")
     async def root() -> dict[str, str]:

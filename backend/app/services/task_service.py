@@ -23,6 +23,9 @@ from app.schemas.task import (
     BatchCreateTaskRequest,
     CreateTaskRequest,
     PaginatedTaskResponse,
+    PipelineStageStatus,
+    PipelineStatusResponse,
+    SnapshotResponse,
     TaskDetailResponse,
     TaskEventResponse,
     TaskListQuery,
@@ -292,9 +295,31 @@ class TaskService:
     @staticmethod
     def _task_to_detail(task: CollectionTask) -> TaskDetailResponse:
         base = TaskService._task_to_response(task)
+        task_events = sorted(task.events, key=lambda event: event.created_at)
+        events = [TaskService._event_to_response(e) for e in task_events]
+        latest_by_stage: dict[str, TaskEventResponse] = {}
+        for event in events:
+            latest_by_stage[event.stage] = event
+
         return TaskDetailResponse(
             **base.model_dump(),
-            events=[TaskService._event_to_response(e) for e in task.events],
+            events=events,
+            snapshot=SnapshotResponse.model_validate(task.snapshot) if task.snapshot else None,
+            pipeline_status=PipelineStatusResponse(
+                stages=[
+                    PipelineStageStatus(
+                        stage=event.stage,
+                        status=event.status,
+                        error_code=event.error_code,
+                        error_message=event.message if event.error_code else None,
+                    )
+                    for event in latest_by_stage.values()
+                ],
+                current_stage=events[-1].stage if events else None,
+                overall_status=base.status,
+                retry_count=base.retry_count,
+                max_retries=base.max_retries,
+            ),
         )
 
     @staticmethod

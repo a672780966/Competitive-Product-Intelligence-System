@@ -16,20 +16,24 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.logging import get_logger
+from app.models import SourceSnapshot
 from app.schemas.task import (
     BatchCreateTaskRequest,
     BatchCreateTaskResponse,
     CreateTaskRequest,
     PaginatedTaskResponse,
+    SnapshotResponse,
     TaskDetailResponse,
     TaskEventResponse,
     TaskListQuery,
     TaskResponse,
 )
+from app.repositories.task_repository import TaskRepository
 from app.services.task_service import TaskService
 from app.models.enums import TaskPriority, TaskStatus
 
@@ -79,6 +83,23 @@ async def list_tasks(
     )
     service = TaskService(db)
     return await service.list_tasks(query)
+
+
+@router.get("/{task_id}/snapshots", response_model=SnapshotResponse | None)
+async def get_task_snapshot(
+    task_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> SnapshotResponse | None:
+    """Get the source snapshot for a task."""
+    repo = TaskRepository(db)
+    task = await repo.get_by_id(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    result = await db.execute(
+        select(SourceSnapshot).where(SourceSnapshot.task_id == task_id),
+    )
+    return result.scalar_one_or_none()
 
 
 @router.get("/{task_id}", response_model=TaskDetailResponse)
