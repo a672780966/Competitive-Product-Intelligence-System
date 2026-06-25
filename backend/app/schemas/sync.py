@@ -33,6 +33,13 @@ class SyncRecordResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SyncAllResponse(BaseModel):
+    """Response for sync-all trigger endpoint."""
+
+    synced_count: int
+    records: list[SyncRecordResponse]
+
+
 class PaginatedSyncResponse(BaseModel):
     """Paginated list of sync records."""
 

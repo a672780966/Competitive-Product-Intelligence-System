@@ -13,8 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.repositories.product_repository import ProductRepository
 from app.repositories.sync_repository import SyncRepository
-from app.schemas.sync import PaginatedSyncResponse, SyncRecordResponse
+from app.schemas.sync import PaginatedSyncResponse, SyncAllResponse, SyncRecordResponse
+from app.services.feishu_sync_service import FeishuSyncService
 
 router = APIRouter(prefix="/api/v1/sync-records", tags=["sync-records"])
 
@@ -57,3 +59,42 @@ async def get_sync_record(
     if record is None:
         raise HTTPException(status_code=404, detail="Sync record not found")
     return record
+
+
+@router.post("/sync-product/{product_id}", response_model=SyncRecordResponse)
+async def trigger_sync_product(
+    product_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> SyncRecordResponse:
+    """Trigger a single product sync to Feishu Bitable.
+
+    Returns the sync record — HTTP 200 even if the sync itself fails,
+    because the failure is recorded in the record. Returns 404 only
+    when the product does not exist.
+    """
+    prod_repo = ProductRepository(db)
+    product = await prod_repo.get_by_id(product_id)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    service = FeishuSyncService(db)
+    record = await service.sync_product(product_id)
+    return record
+
+
+@router.post("/sync-all", response_model=SyncAllResponse)
+async def trigger_sync_all(
+    db: AsyncSession = Depends(get_db),
+) -> SyncAllResponse:
+    """Trigger sync for all pending products.
+
+    Pending products are those with ``auto_approved`` or ``approved``
+    status and no ``feishu_record_id``. Returns a summary including
+    how many products were processed and the per-record results.
+    """
+    service = FeishuSyncService(db)
+    records = await service.sync_all_pending()
+    return SyncAllResponse(
+        synced_count=len(records),
+        records=[SyncRecordResponse.model_validate(r) for r in records],
+    )
