@@ -1,11 +1,11 @@
 // CPIS V1 — 人工复核详情页 (左右对照面板)
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Card, Descriptions, Tag, Button, Space, Spin, Input, Divider, message, Progress,
 } from "antd";
-import { ArrowLeftOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, CheckOutlined, CloseOutlined, SaveOutlined } from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { reviewsApi } from "../../api/client";
 import type { EvidenceItem } from "../../types";
@@ -40,16 +40,29 @@ export default function ReviewDetailPage() {
     onSuccess: () => message.success("草稿已保存"),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: () => reviewsApi.update(versionId!, { corrections, comments }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["review", versionId] });
+      message.success("修改已保存");
+    },
+  });
+
   if (isLoading) return <Spin size="large" style={{ display: "block", margin: "100px auto" }} />;
   if (!detail) return <p>未找到复核记录</p>;
 
   const sd = detail.structured_data as Record<string, unknown>;
+  const currentReview = detail.current_review as {
+    corrections?: Record<string, unknown>;
+    changed_fields?: unknown;
+  } | null;
 
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/reviews")}>返回</Button>
         <Button onClick={() => draftMutation.mutate()} loading={draftMutation.isPending}>保存草稿</Button>
+        <Button icon={<SaveOutlined />} onClick={() => updateMutation.mutate()} loading={updateMutation.isPending}>保存修改</Button>
         <Button type="primary" icon={<CheckOutlined />} onClick={() => approveMutation.mutate()}
           loading={approveMutation.isPending} danger={false}>审核通过</Button>
         <Button danger icon={<CloseOutlined />} onClick={() => rejectMutation.mutate()}
@@ -71,7 +84,7 @@ export default function ReviewDetailPage() {
 
           <Divider>清洗正文</Divider>
           <div style={{ maxHeight: 400, overflow: "auto", fontSize: 13, lineHeight: 1.6, background: "#fafafa", padding: 12, borderRadius: 4, whiteSpace: "pre-wrap" }}>
-            {detail.cleaned_text || "无清洗文本"}
+            {detail.source_text || detail.cleaned_text || "无清洗文本"}
           </div>
 
           <Divider>字段证据</Divider>
@@ -116,6 +129,31 @@ export default function ReviewDetailPage() {
               ))}
             </>
           )}
+
+          {currentReview?.corrections && Object.keys(currentReview.corrections).length > 0 && (
+            <>
+              <Divider>已保存修改</Divider>
+              {Object.entries(currentReview.corrections).map(([key, value]) => (
+                <div key={key} style={{ marginBottom: 8 }}>
+                  <label style={{ fontWeight: 500, fontSize: 13 }}>{key}</label>
+                  <div style={{ fontSize: 13, color: "#666", marginTop: 2, whiteSpace: "pre-wrap" }}>
+                    {String(value)}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {currentReview?.changed_fields ? (
+            <>
+              <Divider>变更字段</Divider>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {Array.isArray(currentReview.changed_fields)
+                  ? (currentReview.changed_fields as Array<string | number | boolean>).map(field => <Tag key={String(field)}>{String(field)}</Tag>)
+                  : <span style={{ fontSize: 13, color: "#666" }}>{String(currentReview.changed_fields)}</span>}
+              </div>
+            </>
+          ) : null}
 
           <Divider>审核意见</Divider>
           <TextArea rows={3} placeholder="审核意见（可选）" value={comments} onChange={e => setComments(e.target.value)} />

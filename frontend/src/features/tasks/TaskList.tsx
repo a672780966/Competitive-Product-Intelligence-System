@@ -1,10 +1,10 @@
 // CPIS V1 — 采集任务列表 & 创建页面
 
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Table, Button, Tag, Input, Space, Modal, Form, Select, message, Typography,
 } from "antd";
-import { PlusOutlined, ReloadOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tasksApi } from "../../api/client";
 import { useNavigate } from "react-router-dom";

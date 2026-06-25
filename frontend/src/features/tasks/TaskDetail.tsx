@@ -1,10 +1,11 @@
 // CPIS V1 — 任务详情页面
 
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, Descriptions, Tag, Timeline, Button, Space, message, Spin } from "antd";
+import { Card, Descriptions, Tag, Timeline, Button, Space, message, Spin, Table } from "antd";
 import { ArrowLeftOutlined, ReloadOutlined, StopOutlined } from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tasksApi } from "../../api/client";
+import type { PipelineStageStatus } from "../../types";
 
 const statusColors: Record<string, string> = {
   pending: "default", validating: "processing", fetching: "processing",
@@ -69,7 +70,7 @@ export default function TaskDetailPage() {
         </Descriptions>
       </Card>
 
-      <Card title="事件日志">
+      <Card title="事件日志" style={{ marginBottom: 16 }}>
         {task.events && task.events.length > 0 ? (
           <Timeline items={task.events.map((e: { stage: string; status: string; message: string | null; created_at: string }) => ({
             color: e.status === "failed" || e.status === "blocked" ? "red" : e.status === "completed" ? "green" : "blue",
@@ -83,6 +84,54 @@ export default function TaskDetailPage() {
           }))} />
         ) : <p style={{ color: "#999" }}>暂无事件记录</p>}
       </Card>
+
+      {task.snapshot && (
+        <Card title="快照信息" style={{ marginBottom: 16 }}>
+          <Descriptions column={1} size="small">
+            <Descriptions.Item label="最终URL">
+              {task.snapshot.final_url ? <a href={task.snapshot.final_url} target="_blank" rel="noreferrer">{task.snapshot.final_url}</a> : "—"}
+            </Descriptions.Item>
+            <Descriptions.Item label="内容哈希">{task.snapshot.content_hash || "—"}</Descriptions.Item>
+            <Descriptions.Item label="HTML哈希">{task.snapshot.html_hash || "—"}</Descriptions.Item>
+            <Descriptions.Item label="清洗文本预览">
+              <div style={{ maxHeight: 160, overflow: "auto", whiteSpace: "pre-wrap", background: "#fafafa", padding: 12, borderRadius: 4 }}>
+                {task.snapshot.cleaned_text ? task.snapshot.cleaned_text.slice(0, 1000) : "—"}
+              </div>
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
+
+      {task.pipeline_status && (
+        <Card title="管道状态">
+          <Descriptions column={2} size="small" style={{ marginBottom: 16 }}>
+            <Descriptions.Item label="整体状态">
+              <Tag color={statusColors[task.pipeline_status.overall_status]}>
+                {statusLabels[task.pipeline_status.overall_status] || task.pipeline_status.overall_status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="当前阶段">
+              {task.pipeline_status.current_stage ? <Tag>{task.pipeline_status.current_stage}</Tag> : "—"}
+            </Descriptions.Item>
+            <Descriptions.Item label="重试次数">
+              {task.pipeline_status.retry_count}/{task.pipeline_status.max_retries}
+            </Descriptions.Item>
+          </Descriptions>
+          <Table<PipelineStageStatus>
+            dataSource={task.pipeline_status.stages}
+            rowKey="stage"
+            pagination={false}
+            size="small"
+            columns={[
+              { title: "阶段", dataIndex: "stage", key: "stage" },
+              { title: "状态", dataIndex: "status", key: "status",
+                render: (v: string) => <Tag color={statusColors[v]}>{statusLabels[v] || v}</Tag> },
+              { title: "错误码", dataIndex: "error_code", key: "error_code", render: (v: string | null) => v || "—" },
+              { title: "错误信息", dataIndex: "error_message", key: "error_message", ellipsis: true, render: (v: string | null) => v || "—" },
+            ]}
+          />
+        </Card>
+      )}
     </div>
   );
 }

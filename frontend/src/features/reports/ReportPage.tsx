@@ -1,7 +1,7 @@
 // CPIS V1 — 竞品简报页面
 
-import React, { useState } from "react";
-import { Card, Button, Input, Typography, message, Space, Divider } from "antd";
+import { useState } from "react";
+import { Button, Card, Input, Space, Typography, message } from "antd";
 import { FileTextOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useMutation } from "@tanstack/react-query";
 import { reportsApi } from "../../api/client";

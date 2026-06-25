@@ -1,16 +1,14 @@
 // CPIS V1 — Admin layout with sidebar navigation
 
-import React from "react";
 import { Layout, Menu, Typography } from "antd";
 import {
-  DashboardOutlined,
   LinkOutlined,
   DatabaseOutlined,
   CheckCircleOutlined,
   SyncOutlined,
   FileTextOutlined,
 } from "@ant-design/icons";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -23,7 +21,7 @@ const menuItems = [
   { key: "/reports", icon: <FileTextOutlined />, label: "竞品简报" },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const selectedKey = "/" + location.pathname.split("/")[1];
@@ -48,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span style={{ fontSize: 16, fontWeight: 500 }}>管理后台</span>
         </Header>
         <Content style={{ margin: 24, padding: 24, background: "#fff", borderRadius: 8, minHeight: 360 }}>
-          {children}
+          <Outlet />
         </Content>
       </Layout>
     </Layout>
