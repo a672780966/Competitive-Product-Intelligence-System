@@ -1,0 +1,99 @@
+{
+  "brand": "马登工装 / Maden",
+  "total_queries": 4,
+  "total_results": 11,
+  "results": [
+    {
+      "query": "\"马登工装\" 品牌 官网",
+      "title": "马登工装官方旗舰店-马登工装官方旗舰店促销价格、马登工装 ...",
+      "url": "https://www.taobao.com/chanpin/9dec80991351680db87ac1e1d024df9d3c9e9746dca392f1760c8b45379a6bb1.html",
+      "domain": "www.taobao.com",
+      "snippet": "",
+      "risk_level": "blocked"
+    },
+    {
+      "query": "\"马登工装\" 品牌 官网",
+      "title": "马登（男鞋品牌）_百度百科",
+      "url": "https://baike.baidu.com/item/%E9%A9%AC%E7%99%BB/9266132",
+      "domain": "baike.baidu.com",
+      "snippet": "",
+      "risk_level": "low"
+    },
+    {
+      "query": "\"马登工装\" 品牌 官网",
+      "title": "【马登工装】-马登工装厂家、品牌、图片、热帖-阿里巴巴",
+      "url": "https://www.1688.com/zhuti/-C2EDB5C7B9A4D7B0.html",
+      "domain": "www.1688.com",
+      "snippet": "",
+      "risk_level": "blocked"
+    },
+    {
+      "query": "Maden 工装 复古 男装",
+      "title": "Maden复古风工装 - 京东",
+      "url": "https://www.jd.com/hprm/1315773c5b68bcbb4dc0.html",
+      "domain": "www.jd.com",
+      "snippet": "",
+      "risk_level": "blocked"
+    },
+    {
+      "query": "Maden 工装 复古 男装",
+      "title": "马登官方旗舰店 - 京东 - JD.com",
+      "url": "https://mall.jd.com/index-929180.html",
+      "domain": "mall.jd.com",
+      "snippet": "",
+      "risk_level": "blocked"
+    },
+    {
+      "query": "Maden 工装 复古 男装",
+      "title": "马登工装官方旗舰店男装-马登工装官方旗舰店男装促销价格 ...",
+      "url": "https://www.taobao.com/chanpin/9dec80991351680db87ac1e1d024df9d3bcd7a01e5f8bb99053ef129b71516204e05a13ae958fddb52828fa21bbc69fe.html",
+      "domain": "www.taobao.com",
+      "snippet": "",
+      "risk_level": "blocked"
+    },
+    {
+      "query": "Maden 工装 复古 男装",
+      "title": "Maden 马登工装 男士复古重磅棉籽壳工装夹克TS2407206",
+      "url": "https://www.zhizhizhi.com/n/c3tnk",
+      "domain": "www.zhizhizhi.com",
+      "snippet": "",
+      "risk_level": "low"
+    },
+    {
+      "query": "Maden 工装 复古 男装",
+      "title": "首頁 - 馬登工裝",
+      "url": "https://www.madenwear.com/",
+      "domain": "www.madenwear.com",
+      "snippet": "",
+      "risk_level": "low"
+    },
+    {
+      "query": "Maden 工装 复古 男装",
+      "title": "Maden 马登工装 男士美式复古重磅230g纯棉t恤 2件装",
+      "url": "https://www.zhizhizhi.com/n/c6xww",
+      "domain": "www.zhizhizhi.com",
+      "snippet": "",
+      "risk_level": "low"
+    },
+    {
+      "query": "Maden 工装 复古 男装",
+      "title": "Maden 马登工装 男士美式复古重磅230g纯棉t恤 2件装79.9元 ...",
+      "url": "https://www.baicaio.com/item/951902.html",
+      "domain": "www.baicaio.com",
+      "snippet": "",
+      "risk_level": "low"
+    },
+    {
+      "query": "Maden 工装 复古 男装",
+      "title": "穿搭 | 我买过的马登（一）_男上装_什么值得买",
+      "url": "https://post.smzdm.com/p/akxw4nx4/",
+      "domain": "post.smzdm.com",
+      "snippet": "",
+      "risk_level": "low"
+    }
+  ],
+  "summary": {
+    "safe_count": 6,
+    "blocked_count": 5
+  }
+}

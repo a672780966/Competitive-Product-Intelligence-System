@@ -25,7 +25,8 @@
 
 ## CPIS とは
 
-CPIS（Competitive Product Intelligence System）は、公開 Web ソースから競合製品情報を自動収集・抽出・分析するエンタープライズ向けプラットフォームです。AI 支援パイプラインにより、散在する競合情報を構造化されたデータベースとトレーサブルなビジネスインテリジェンスに変換します。
+CPIS（Competitive Product Intelligence System）は、公開 Web ソースから競合製品情報を収集・抽出・分析するエンタープライズ向けプラットフォームです。V1 Core Pipeline + Provider-Ready アーキテクチャ。設定可能なパイプラインにより、散在する競合情報を構造化されたデータベースに変換します。
+⚠️ 現在は Stub/Mock Provider ベース、実際の LLM/Search 統合は今後のフェーズで対応予定。
 
 ---
 
@@ -33,7 +34,7 @@ CPIS（Competitive Product Intelligence System）は、公開 Web ソースか�
 
 ```mermaid
 flowchart LR
-    A["🧠 自然言語リクエスト"] --> B["🔍 AI ソース発見"]
+    A["🧠 自然言語リクエスト"] --> B["🔍 ソース発見 (Mock Mode)"]
     B --> C["📋 候補ソース"]
     C --> D["👤 ユーザー選択"]
     D --> E["📄 収集テンプレート / RunPlan"]
@@ -52,11 +53,11 @@ flowchart LR
 
 | モジュール | 説明 |
 |-----------|------|
-| **AI ソース発見** | SearchProvider + LLMProvider による自然言語からのインテリジェントソース発見 |
+| **Discovery Provider Ready / Mock Mode** | SearchProvider + LLMProvider インターフェース定義済み。デフォルトは MockSearchProvider + StubLLMProvider（固定データを返し、ネットワーク呼び出しなし）。DuckDuckGoSearchProvider のコードは準備済みだが未検証。OpenAI/Gemini/Claude/SerpAPI は予約済み（すべて未実装）。 |
 | **候補ソース選定** | リスク評価、ソース種別分類、スコアリング |
 | **RunPlan エンジン** | 宣言的 JSON 計画、URL パターン解決 |
 | **収集ランタイム** | 8 種類の登録済みランタイム（HTTP/Playwright/予約済み） |
-| **AI 抽出** | HTML → 構造化 Product + ProductVersion |
+| **AI 抽出 (Stub Mode)** | ProductExtractor + StubLLMProvider パイプライン。現在はモックデータを返す（スタブモード）、信頼度しきい値 0.7 で自動承認。実際の LLM 抽出は将来のフェーズで実装予定。 |
 | **製品バージョン管理** | 差分追跡、Changelog、証拠ベース抽出 |
 | **レビューワークフロー** | 承認/却下/再開、自動承認閾値 |
 | **Feishu 同期** | 双方向 Bitable 同期、リトライ、ステータス追跡 |

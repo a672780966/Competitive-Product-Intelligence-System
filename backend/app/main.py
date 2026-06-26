@@ -18,6 +18,7 @@ from app.api.discovery import router as discovery_router
 from app.api.collection_templates import router as collection_templates_router
 from app.api.scheduled_collections import router as scheduled_collections_router
 from app.api.usage import router as usage_router
+from app.api.provider_status import router as provider_status_router
 from app.core import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
@@ -72,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(collection_templates_router)
     app.include_router(scheduled_collections_router)
     app.include_router(usage_router)
+    app.include_router(provider_status_router)
 
     @app.get("/")
     async def root() -> dict[str, str]:

@@ -25,7 +25,8 @@
 
 ## CPIS 소개
 
-CPIS(Competitive Product Intelligence System)는 공개 웹 소스에서 경쟁사 제품 정보를 자동으로 수집, 추출, 분석하는 엔터프라이즈 플랫폼입니다. AI 지원 파이프라인을 통해 분산된 경쟁 정보를 구조화된 데이터베이스와 추적 가능한 비즈니스 인텔리전스로 변환합니다.
+CPIS(Competitive Product Intelligence System)는 공개 웹 소스에서 경쟁사 제품 정보를 수집, 추출, 분석하는 엔터프라이즈 플랫폼입니다. V1 Core Pipeline + Provider-Ready 아키텍처. 설정 가능한 파이프라인을 통해 분산된 경쟁 정보를 구조화된 데이터베이스로 변환합니다.
+⚠️ 현재 Stub/Mock Provider 기반, 실제 LLM/Search 통합은 추후 단계에서 구현 예정.
 
 ---
 
@@ -33,7 +34,7 @@ CPIS(Competitive Product Intelligence System)는 공개 웹 소스에서 경쟁�
 
 ```mermaid
 flowchart LR
-    A["🧠 자연어 요청"] --> B["🔍 AI 소스 발견"]
+    A["🧠 자연어 요청"] --> B["🔍 소스 발견 (Mock Mode)"]
     B --> C["📋 후보 소스"]
     C --> D["👤 사용자 선택"]
     D --> E["📄 수집 템플릿 / RunPlan"]
@@ -52,11 +53,11 @@ flowchart LR
 
 | 모듈 | 설명 |
 |------|------|
-| **AI 소스 발견** | SearchProvider + LLMProvider 기반 자연어 소스 발견 |
+| **Discovery Provider Ready / Mock Mode** | SearchProvider + LLMProvider 인터페이스 정의됨. 기본적으로 MockSearchProvider + StubLLMProvider 사용（고정 데이터 반환, 네트워크 호출 없음）. DuckDuckGoSearchProvider 코드는 준비되었으나 미검증. OpenAI/Gemini/Claude/SerpAPI는 예약됨（모두 미구현）. |
 | **후보 소스 선정** | 위험 평가, 소스 유형 분류, 점수 산정 |
 | **RunPlan 엔진** | 선언적 JSON 계획, URL 패턴 해결 |
 | **수집 런타임** | 8개 등록 런타임 (HTTP/Playwright/예약) |
-| **AI 추출** | HTML → 구조화된 Product + ProductVersion |
+| **AI 추출 (Stub Mode)** | ProductExtractor + StubLLMProvider 파이프라인. 현재 모의 데이터 반환（스텁 모드）, 신뢰도 임계값 0.7에서 자동 승인. 실제 LLM 추출은 추후 단계에서 구현 예정. |
 | **제품 버전 관리** | 차이 추적, Changelog, 증거 기반 추출 |
 | **검토 워크플로우** | 승인/거부/재개, 자동 승인 임계값 |
 | **Feishu 동기화** | 양방향 Bitable 동기화, 재시도, 상태 추적 |

@@ -11,8 +11,9 @@
 </p>
 
 <p align="center">
-  Automatically collect, extract, and analyze competitive product information<br>
-  from public web sources — transforming raw data into structured, actionable insights.
+  Collect, extract, and analyze competitive product information<br>
+  from public web sources. V1 Core Pipeline + Provider-Ready architecture;<br>
+  real LLM and search integrations pending.
 </p>
 
 <p align="center">
@@ -30,18 +31,18 @@
 
 ## Why CPIS
 
-Manual competitive intelligence is slow, inconsistent, and doesn't scale. CPIS replaces it with a structured, AI-assisted pipeline.
+Manual competitive intelligence is slow, inconsistent, and doesn't scale. CPIS replaces it with a structured, configurable pipeline (stub AI provider by default).
 
 | Before | After |
 |--------|-------|
-| Manual browsing and copy-paste | Natural language → structured data |
+| Manual browsing and copy-paste | Natural language → structured data (mock mode) |
 | Scattered notes and spreadsheets | Centralized database with versioning |
 | One-off analysis with no repeatability | Declarative RunPlans and templates |
 | Hard-to-track competitive changes | Product diffs, changelogs, confidence scoring |
 
 **Key capabilities:**
 
-- **AI-Native Discovery** — SearchProvider + LLMProvider architecture discovers relevant sources from natural language queries, with risk assessment and source type classification
+- **Discovery Provider Ready** — SearchProvider + LLMProvider architecture with DuckDuckGo (code ready) / Mock (default) search, and Stub (default) LLM. Reserved slots for OpenAI, Gemini, Claude, SerpAPI.
 - **Declarative Collection** — JSON RunPlans define what, where, and how to collect, with URL pattern resolution and collector routing
 - **Structured Extraction** — AI extraction pipeline converts unstructured HTML into normalized product data with confidence scoring and version tracking
 - **Enterprise Integration** — Feishu Bitable sync, human review workflows, usage dashboards, and MCP tool server
@@ -52,7 +53,7 @@ Manual competitive intelligence is slow, inconsistent, and doesn't scale. CPIS r
 
 ```mermaid
 flowchart LR
-    A["🧠 Natural Language Request"] --> B["🔍 AI Source Discovery"]
+    A["🧠 Natural Language Request"] --> B["🔍 Source Discovery (Mock Mode)"]
     B --> C["📋 Source Candidates"]
     C --> D["👤 User Selection"]
     D --> E["📄 CollectionTemplate / RunPlan"]
@@ -71,12 +72,12 @@ flowchart LR
 
 | Module | Description |
 |--------|-------------|
-| **AI Discovery** | SearchProvider + LLMProvider for intelligent source discovery from natural language. DuckDuckGo (default), Stub for testing, with reserved slots for OpenAI, Gemini, Claude, SerpAPI. |
+| **Discovery Provider Ready / Mock Mode** | SearchProvider + LLMProvider interface defined. MockSearchProvider + StubLLMProvider by default (returns fixed data, no network calls). DuckDuckGoSearchProvider code ready but not verified with real searches. Reserved slots for OpenAI, Gemini, Claude, SerpAPI (all pending). |
 | **Candidate Selection** | Risk assessment (low/medium/high/blocked), source type classification (official/marketplace/news/review), ranking by desirability score. |
 | **RunPlan Engine** | Declarative JSON plans with URL list, pattern resolution, search, and sitemap source types. No dynamic code execution. Validated against Pydantic schema. |
 | **Collector Runtime** | 8-registry system: direct HTTP (default, always enabled), Playwright (feature-gated), and 5 reserved runtimes (Scrapling, Crawl4AI, RSS, PDF, API). Retry policies per runtime. Execution reports for every fetch. |
-| **AI Extraction** | ProductExtractor + ModelProvider pipeline converts cleaned HTML into structured Product, ProductVersion, and ProductEvidence records. Confidence threshold (0.7) for auto-approve. |
-| **Product Versioning** | Diff tracking between product versions, changelog generation, evidence-based extraction with source attribution. |
+| **AI Extraction (Stub Mode)** | ProductExtractor + StubLLMProvider pipeline. Currently returns mock data (stub mode), confidence threshold 0.7 for auto-approve. Real LLM extraction pending. |
+| **Product Versioning** | Diff tracking between product versions, changelog generation (stub-based), evidence-based extraction with source attribution. |
 | **Human Review** | Approval workflow with auto-approve, reject, and reopen. Multi-stage pipeline status tracking per task. |
 | **Feishu Bitable Sync** | Bidirectional sync with retry logic, status tracking, and record ID persistence. Manual and batch sync endpoints. |
 
@@ -101,8 +102,8 @@ graph TB
 
     subgraph Providers["Provider Layer"]
         direction LR
-        Search["SearchProvider<br/>DuckDuckGo, Stub<br/>OpenAI·Gemini·Claude·SerpAPI"]
-        LLM["LLMProvider<br/>Stub<br/>OpenAI·Gemini·Claude·DeepSeek·Qwen"]
+        Search["SearchProvider<br/>DuckDuckGo (code ready), Mock (default)<br/>OpenAI·Gemini·Claude·SerpAPI (reserved)"]
+        LLM["LLMProvider<br/>Stub (default, no real calls)<br/>OpenAI·Gemini·Claude·DeepSeek·Qwen (reserved)"]
     end
 
     subgraph Pipeline["Async Pipeline (Celery + Redis)"]
@@ -213,21 +214,21 @@ Configure via: `FEISHU_APP_ID`, `FEISHU_APP_SECRET`, `FEISHU_BITABLE_TOKEN`.
 | **Collection** | httpx, Playwright, BeautifulSoup4, lxml, trafilatura |
 | **Frontend** | React 19, TypeScript, Vite, Ant Design 5, TanStack Query |
 | **Infrastructure** | Docker Compose, multi-stage Dockerfiles |
-| **AI Layer** | OpenAI-compatible LLM API, DuckDuckGo Search |
+| **AI Layer (Mock/Stub)** | OpenAICompatibleProvider implemented but defaulting to Stub; DuckDuckGoSearchProvider code ready but not verified |
 | **Integrations** | Feishu Open API, MCP Protocol |
 
 ---
 
 ## Roadmap
 
-- **Discovery Providers** — OpenAI Search, Gemini Search, Claude Search, SerpAPI
-- **LLM Providers** — OpenAI, Gemini, Claude, DeepSeek, Qwen extraction/classification
-- **Collector Runtime Expansion** — RSS feeds, PDF documents, REST API collectors, Scrapling, Crawl4AI
-- **Enterprise Workflow** — Approval roles, audit trails, scheduled intelligence briefs
-- **Product Intelligence** — Advanced diffing, competitor timelines, category-level comparison views
-- **Integrations** — Feishu automation triggers, MCP tool expansion, report export (PDF, Excel)
-
+- **[🔲 REAL] Discovery Providers** — OpenAI Search, Gemini Search, Claude Search, SerpAPI
+- **[🔲 REAL] LLM Providers** — OpenAI, Gemini, Claude, DeepSeek, Qwen extraction/classification
+- **[⚙️ CODE] Collector Runtime Expansion** — RSS feeds, PDF documents, REST API collectors, Scrapling, Crawl4AI
+- Enterprise Workflow — Approval roles, audit trails, scheduled intelligence briefs
+- Product Intelligence — Advanced diffing, competitor timelines, category-level comparison views
+- Integrations — Feishu automation triggers, MCP tool expansion, report export (PDF, Excel)
 ---
+
 
 ## License
 

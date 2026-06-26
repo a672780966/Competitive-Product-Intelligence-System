@@ -11,8 +11,9 @@
 </p>
 
 <p align="center">
-  AI 驱动的竞品信息自动采集、结构化提取与分析系统。<br>
-  将散落在互联网上的公开竞品信息，转化为结构化的产品数据库和可追溯的商业情报。
+  V1 Core Pipeline + Provider-Ready Architecture。<br>
+  将散落在互联网上的公开竞品信息，通过可配置的采集管道，转化为结构化的产品数据库。<br>
+  ⚠️ 当前基于 Stub/Mock Provider，真实 LLM/Search 集成待后续阶段接入。
 </p>
 
 <p align="center">
@@ -45,7 +46,7 @@
 
 ```mermaid
 flowchart LR
-    A["🧠 自然语言请求"] --> B["🔍 AI 来源发现"]
+    A["🧠 自然语言请求"] --> B["🔍 来源发现 (Mock Mode)"]
     B --> C["📋 候选来源"]
     C --> D["👤 用户选择"]
     D --> E["📄 采集模板 / RunPlan"]
@@ -64,12 +65,12 @@ flowchart LR
 
 | 模块 | 说明 |
 |------|------|
-| **AI 来源发现** | SearchProvider + LLMProvider 架构，从自然语言描述自动发现相关竞品信息来源。默认 DuckDuckGo，预留 OpenAI/Gemini/Claude/SerpAPI 接口。 |
+| **Discovery Provider Ready / Mock Mode** | SearchProvider + LLMProvider 接口已定义。默认 MockSearchProvider + StubLLMProvider（返回固定数据，无网络调用）。DuckDuckGoSearchProvider 代码已实现但未经真实验证。预留 OpenAI/Gemini/Claude/SerpAPI 接口（均尚待实现）。 |
 | **候选来源筛选** | 风险评估（低/中/高/拦截）、来源类型分类（官网/电商/资讯/评测）、综合排序。 |
 | **RunPlan 引擎** | 声明式 JSON 计划，支持 URL 列表、URL 模式、搜索、Sitemap 四种来源类型。无动态代码执行，经 Pydantic 校验。 |
 | **采集运行时** | 8 种注册器：direct HTTP（默认启用）、Playwright（功能开关控制）、5 种预留（Scrapling/Crawl4AI/RSS/PDF/API）。每种采集器独立重试策略、执行报告。 |
-| **AI 结构化提取** | ProductExtractor + ModelProvider 管道，将清洗后的 HTML 转换为结构化的 Product、ProductVersion、ProductEvidence 记录。置信度阈值 0.7 自动通过。 |
-| **产品版本管理** | 版本间差异对比、Changelog 生成、基于证据的提取（带来源归因）。 |
+| **AI 提取框架 (Stub Mode)** | ProductExtractor + StubLLMProvider 管道。当前提取返回模拟数据（stub 模式），置信度阈值 0.7 自动通过。真实 LLM 提取待后续阶段实现。 |
+| **产品版本管理** | 版本间差异对比、Changelog 生成（基于 stub 数据）、基于证据的提取（带来源归因）。 |
 | **人工评审** | 审批工作流（自动通过/需人工/已批准/已拒绝），任务级多阶段状态追踪。 |
 | **飞书多维表格同步** | 双向同步，重试+状态追踪，单条/批量同步 API。 |
 
@@ -94,8 +95,8 @@ graph TB
 
     subgraph Providers["Provider 层"]
         direction LR
-        Search["SearchProvider<br/>DuckDuckGo / Stub<br/>OpenAI·Gemini·Claude·SerpAPI"]
-        LLM["LLMProvider<br/>Stub<br/>OpenAI·Gemini·Claude·DeepSeek·Qwen"]
+        Search["SearchProvider<br/>DuckDuckGo (代码就绪) / Mock (默认)<br/>OpenAI·Gemini·Claude·SerpAPI (预留)"]
+        LLM["LLMProvider<br/>Stub (默认, 无真实调用)<br/>OpenAI·Gemini·Claude·DeepSeek·Qwen (预留)"]
     end
 
     subgraph Pipeline["异步管道 (Celery + Redis)"]
@@ -210,16 +211,16 @@ CPIS 与飞书多维表格深度集成：
 | **采集** | httpx, Playwright, BeautifulSoup4, lxml, trafilatura |
 | **前端** | React 19, TypeScript, Vite, Ant Design 5, TanStack Query |
 | **基础设施** | Docker Compose, 多阶段 Dockerfile |
-| **AI 层** | OpenAI 兼容 LLM API, DuckDuckGo Search |
+| **AI 层 (Mock/Stub)** | OpenAICompatibleProvider 已实现但默认使用 Stub；DuckDuckGoSearchProvider 代码就绪但未经真实验证 |
 | **集成** | 飞书开放 API, MCP 协议 |
 
 ---
 
 ## 路线图
 
-- **发现 Provider** — OpenAI Search / Gemini Search / Claude Search / SerpAPI
-- **LLM Provider** — OpenAI / Gemini / Claude / DeepSeek / Qwen 提取与分类
-- **采集运行时扩展** — RSS 订阅 / PDF 文档 / REST API / Scrapling / Crawl4AI
+- **[🔲 REAL] 发现 Provider** — OpenAI Search / Gemini Search / Claude Search / SerpAPI（全部待实现）
+- **[🔲 REAL] LLM Provider** — OpenAI / Gemini / Claude / DeepSeek / Qwen（全部待实现）
+- **[⚙️ CODE] 采集运行时扩展** — RSS 订阅 / PDF 文档 / REST API / Scrapling / Crawl4AI（代码就绪，功能开关关闭）
 - **企业工作流** — 审批角色 / 审计日志 / 定时情报简报
 - **产品情报** — 高级差异对比 / 竞品时间线 / 品类比较视图
 - **集成扩展** — 飞书自动化触发 / MCP 工具扩展 / 报告导出（PDF / Excel）

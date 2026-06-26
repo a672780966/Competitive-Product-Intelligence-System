@@ -7,15 +7,15 @@
 
 ## Overview
 
-CPIS V1 (Competitive Product Intelligence System V1) is an internal enterprise system designed to automatically collect publicly available competitive product information, process it through AI-powered structured extraction, store it in a database, synchronize with Feishu Bitable, and generate briefing reports. It replaces manual competitive intelligence workflows with a semi-automated, configurable pipeline.
+CPIS V1 (Competitive Product Intelligence System V1) is an internal enterprise system designed to automatically collect publicly available competitive product information, process it through structured extraction (stub AI provider by default), store it in a database, synchronize with Feishu Bitable, and generate briefing reports. It replaces manual competitive intelligence workflows with a semi-automated, configurable pipeline.
 
 ---
 
 ## Features
 
 - **Configurable Collection Pipeline** — Define templates to collect data from competition web pages via HTTP/HTML scraping.
-- **AI-Powered Structured Extraction** — Leverages OpenAI-compatible LLMs to extract structured product data from raw HTML/text.
-- **Product Versioning & Diffing** — Tracks changes between successive product snapshots with AI-generated changelogs.
+- **Structured Extraction Framework** — Extractor pipeline with stub AI provider. Real LLM integration pending.
+- **Product Versioning & Diffing** — Tracks changes between successive product snapshots with stub changelogs currently.
 - **Feishu Integration** — Syncs collected product data to Feishu Bitable for team collaboration.
 - **Task Scheduler** — Built-in Celery task scheduler for recurring collection jobs.
 - **Dashboard & Usage Tracking** — Frontend dashboard with usage metrics and search history.

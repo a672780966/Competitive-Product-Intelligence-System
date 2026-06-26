@@ -217,6 +217,12 @@ export default function DiscoveryPage() {
         <div style={{ textAlign: "center", padding: 60 }}>
           <Spin size="large" />
           <Paragraph style={{ marginTop: 16, color: "#999" }}>正在搜索并分析来源...</Paragraph>
+          <Alert
+            type="warning"
+            showIcon
+            message="⚠️ Discovery Provider Ready / Mock Mode — 当前使用模拟数据，未调用真实搜索引擎"
+            style={{ marginTop: 16, maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}
+          />
         </div>
       )}
 

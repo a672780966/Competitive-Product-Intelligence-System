@@ -41,7 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [0.1.0-rc.4] — 2026-06-24 — Phase IV: AI Discovery Provider Layer
 
 ### Added
-- **Discovery provider interface** — `providers/interfaces.py` defining the abstract base for AI-powered discovery providers.
+- **Discovery provider interface** — `providers/interfaces.py` defining the abstract base for discovery provider interface layer.
 - **Search history tracking** — `models/search_history.py`, `repositories/search_history_repository.py`, and corresponding tests.
 - **Discovery provider tests** — `test_discovery_providers.py`, `test_providers_phase4.py` for provider integration verification.
 - **Phase 4 test suite** — Validates AI discovery provider layer functionality, including search history recording and provider abstraction.
@@ -64,7 +64,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [0.1.0-rc.2] — 2026-06-22 — Phase II: Maden Verification
 
 ### Added
-- Verification suite for the "Maden" (麻登) competitive intelligence use case.
+- Verification suite for the "Maden" (马登) competitive intelligence use case.
 - End-to-end pipeline verification with real-world sample URLs.
 - Collection → Cleaning → AI Extraction → Product Versioning data flow validation.
 

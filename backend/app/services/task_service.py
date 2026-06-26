@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.models import CollectionTask, AuditLog
+from app.models.collector_execution_report import CollectorExecutionReport
 from app.models.enums import TaskPriority, TaskStatus
 from app.repositories.task_repository import TaskRepository
 from app.schemas.collector_execution_report import CollectorExecutionReportResponse
@@ -232,6 +233,18 @@ class TaskService:
                 message=f"Validation error: {exc}",
                 error_code="VALIDATION_ERROR",
             )
+            now = datetime.utcnow()
+            self._db.add(CollectorExecutionReport(
+                task_id=task.id,
+                url=task.source_url,
+                collector_runtime="blocked",
+                status="failed",
+                started_at=now,
+                finished_at=now,
+                duration_ms=0,
+                content_size=0,
+                error_message=str(exc),
+            ))
             return
 
         # Update task with normalized URL
@@ -270,6 +283,18 @@ class TaskService:
                 message=result.error_message or "URL validation failed",
                 error_code=result.error_code.value if result.error_code else None,
             )
+            now = datetime.utcnow()
+            self._db.add(CollectorExecutionReport(
+                task_id=task.id,
+                url=task.source_url,
+                collector_runtime="blocked",
+                status="blocked",
+                started_at=now,
+                finished_at=now,
+                duration_ms=0,
+                content_size=0,
+                error_message=result.error_message or "URL validation failed",
+            ))
 
     # ── Mappers ─────────────────────────────────────────────────
 

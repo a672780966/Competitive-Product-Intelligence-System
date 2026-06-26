@@ -140,6 +140,8 @@ async def _do_collect(task_id: str, url: str, current_retry: int = 0) -> dict:
                 error_message=sel.reason,
             )
             session.add(report)
+            await session.flush()
+            await session.commit()
 
             return {"task_id": task_id, "url": url, "status": "blocked", "error": sel.reason}
 
@@ -177,6 +179,8 @@ async def _do_collect(task_id: str, url: str, current_retry: int = 0) -> dict:
                 await repo.create_event(tid, TaskStage.COLLECTION, TaskStatus.FAILED, message="collector_failed")
                 await _record_usage(session, failure=True)
 
+                await session.commit()
+
                 return {"task_id": task_id, "url": url, "status": "failed", "error": error_message}
 
             # Success
@@ -195,6 +199,8 @@ async def _do_collect(task_id: str, url: str, current_retry: int = 0) -> dict:
             report.content_size = len(result.raw_html) if result.raw_html else 0
             report.retry_count = max_retries
             report.snapshot_id = snapshot.id
+
+            await session.commit()
 
             await repo.update_status(tid, TaskStatus.COMPLETED)
             await repo.create_event(
