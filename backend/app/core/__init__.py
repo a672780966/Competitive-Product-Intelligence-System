@@ -41,10 +41,17 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
 
     # --- AI (LLM) ---
-    LLM_PROVIDER: str = "openai"
+    LLM_PROVIDER: str = "stub"          # stub | openai | gemini | claude | deepseek | qwen
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "gpt-4o"
     LLM_BASE_URL: str = ""
+
+    # --- Search Provider ---
+    SEARCH_PROVIDER: str = "duckduckgo"
+
+    # --- Cache ---
+    CACHE_ENABLED: bool = True
+    CACHE_TTL_SECONDS: int = 300
 
     # --- Feishu ---
     FEISHU_APP_ID: str = ""
@@ -60,6 +67,14 @@ class Settings(BaseSettings):
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/125.0.0.0 Safari/537.36"
     )
+
+    # --- Collector Feature Flags ---
+    COLLECTOR_PLAYWRIGHT_ENABLED: bool = False
+    COLLECTOR_SCRAPLING_ENABLED: bool = False
+    COLLECTOR_CRAWL4AI_ENABLED: bool = False
+    COLLECTOR_RSS_ENABLED: bool = False
+    COLLECTOR_PDF_ENABLED: bool = False
+    COLLECTOR_API_ENABLED: bool = False
 
     # --- Review ---
     REVIEW_CONFIDENCE_THRESHOLD: float = 0.7

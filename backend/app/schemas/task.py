@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field, field_validator
 
 from app.models.enums import TaskPriority, TaskStatus
+from app.schemas.collector_execution_report import CollectorExecutionReportResponse
 
 
 # ── Request schemas ─────────────────────────────────────────────
@@ -121,9 +122,10 @@ class PipelineStatusResponse(BaseModel):
 
 
 class TaskDetailResponse(TaskResponse):
-    """Task detail including event history, snapshot, and pipeline status."""
+    """Task detail including event history, snapshot, pipeline status, and execution reports."""
 
     events: list[TaskEventResponse] = []
+    execution_reports: list[CollectorExecutionReportResponse] = []
     snapshot: SnapshotResponse | None = None
     pipeline_status: PipelineStatusResponse | None = None
 

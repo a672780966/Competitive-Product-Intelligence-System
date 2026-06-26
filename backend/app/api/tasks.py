@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.logging import get_logger
 from app.models import SourceSnapshot
+from app.schemas.collector_execution_report import CollectorExecutionReportResponse
 from app.schemas.task import (
     BatchCreateTaskRequest,
     BatchCreateTaskResponse,
@@ -152,3 +153,14 @@ async def get_task_events(
     if result is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return result
+
+
+@router.get("/{task_id}/execution-reports", response_model=list[CollectorExecutionReportResponse])
+async def get_task_execution_reports(
+    task_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[CollectorExecutionReportResponse]:
+    """Get collector execution reports for a task."""
+    repo = TaskRepository(db)
+    reports = await repo.get_execution_reports(task_id)
+    return [CollectorExecutionReportResponse.model_validate(r) for r in reports]

@@ -1,134 +1,182 @@
-# CPIS V1
+# CPIS V1 — Competitive Product Intelligence System
 
-Competitive Product Intelligence System V1 — 竞品公开信息自动采集与分析系统
+**竞品公开信息自动采集与分析系统**
 
-## 项目定位
+CPIS V1 is an internal enterprise system that automatically collects publicly available competitive product information, processes it through AI-powered structured extraction, stores it in a database, synchronizes with Feishu Bitable, and generates briefing reports. It replaces manual competitive intelligence workflows with a semi-automated, configurable pipeline.
 
-企业内部使用的竞品公开信息采集与分析系统，将公开产品页面整理为可复用的结构化竞品资产。
+**Served teams:** Product Management, Sales, Marketing, R&D, Management
 
-**服务对象：** 产品团队、外贸销售团队、市场团队、研发团队、管理层
+---
 
-## 核心闭环
+## Architecture
 
 ```
-公开链接录入 → 合规校验 → 网页采集 → 内容清洗
-→ AI 结构化抽取 → 产品入库与版本管理 → 人工复核
-→ 飞书多维表格同步 → 竞品简报生成
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Frontend    │────▶│  FastAPI     │────▶│  PostgreSQL  │
+│  (React 19)  │     │  Backend     │     │  (Database)  │
+└──────────────┘     └──────┬───────┘     └──────────────┘
+                            │
+                    ┌───────┴────────┐
+                    │  Celery Workers │
+                    │  (Async Tasks)  │
+                    └───────┬────────┘
+                            │
+                    ┌───────┴────────┐
+                    │  Collectors    │
+                    │  · HTTP/HTML   │
+                    │  · Playwright  │
+                    │  · RSS         │
+                    │  · PDF         │
+                    │  · API         │
+                    └────────────────┘
 ```
 
-## 快速启动
+**Data flow:** URL Input → Compliance Validation → Web Collection → Content Cleaning → AI Structured Extraction → Product Storage & Versioning → Human Review → Feishu Bitable Sync → Briefing Report Generation
 
-### 前置要求
+See [docs/](./docs/) for detailed architecture documents and phase evidence.
 
-- Docker & Docker Compose
-- Python 3.12+
-- Node.js 22+
+---
 
-### 1. 环境变量
+## Features
+
+- **Configurable Collection Pipeline** — Define templates to collect data from competitive web pages via pluggable collector runtimes (HTTP/HTML, Playwright, RSS, PDF, API).
+- **AI-Powered Structured Extraction** — Leverages OpenAI-compatible LLMs (or stub mode for demos) to extract structured product data from raw HTML/text with confidence scoring.
+- **Product Versioning & Diffing** — Tracks changes between successive product snapshots with AI-generated changelogs and diff analysis.
+- **Feishu Bitable Integration** — Automatic synchronization of collected product data to Feishu Bitable for team-wide collaboration.
+- **Task Scheduler & Async Workers** — Celery-based async task processing for collection jobs with retry policy, execution reports, and monitoring.
+- **Dashboard & Usage Tracking** — Frontend dashboard with collection metrics, task execution reports, search history, and collector runtime distribution.
+- **One-Command Docker Deployment** — Single `docker compose up -d` to start PostgreSQL, Redis, FastAPI backend, Celery workers, and React frontend.
+- **MCP Support** — Model Context Protocol support for AI-assisted discovery and template management.
+
+---
+
+## Quick Start
+
+Get CPIS V1 running locally in under 5 minutes. See the full [Quick Start Guide](release/QUICK_START.md) for detailed instructions.
 
 ```bash
+# Prerequisites: Docker, Docker Compose, Git
+
+# 1. Clone & configure
+git clone <repository-url>
+cd Competitive-Product-Intelligence-System
 cp .env.example .env
-# 编辑 .env，填入飞书、AI 等配置
-```
+# Edit .env as needed (DB_PASSWORD, LLM_API_KEY, etc.)
 
-### 2. Docker 启动
-
-```bash
+# 2. Start all services
 docker compose up -d
+
+# 3. Verify health
+curl http://localhost:8000/health/live
+
+# 4. Seed demo data (optional, recommended)
+docker compose exec backend python scripts/seed_demo.py
+
+# 5. Open the frontend
+# → http://localhost:5173 (dev mode)
+# → http://localhost:8080  (demo mode via docker-compose.demo.yml)
+
+# 6. Stop
+docker compose down
 ```
 
-启动后访问：
-- 后端 API：http://localhost:8000
-- API 文档：http://localhost:8000/docs
-- 前端页面：http://localhost:5173
+The default `LLM_PROVIDER=stub` works out of the box without any API key — ideal for UI demos and pipeline testing.
 
-### 3. 本地开发
+---
 
-#### 后端
+## Demo
+
+A complete walkthrough script for presenters is available at [release/DEMO_SCRIPT.md](release/DEMO_SCRIPT.md). The demo covers:
+
+- **Step 1:** Start the system via Docker Compose
+- **Step 2:** Seed demo data (sample products, templates, usage history)
+- **Step 3:** Browse products, version history, and AI-generated changelogs
+- **Step 4:** Run a collection template and monitor task execution
+- **Step 5:** Check the usage dashboard with metrics and search history
+- **Optional:** Feishu sync and MCP tool integration
+
+**One-command demo start:**
 
 ```bash
-cd backend
-poetry install
-cp ../.env .
-uvicorn app.main:app --reload
+./scripts/start_demo.sh
 ```
 
-#### 前端
+This starts all services using `docker-compose.demo.yml`, waits for the backend to be healthy, seeds demo data, and opens the frontend at [http://localhost:8080](http://localhost:8080).
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+---
 
-### 4. 数据库迁移
+## Tech Stack
 
-```bash
-cd backend
-alembic upgrade head
-```
+| Layer | Technology |
+|-------|-----------|
+| **Backend Framework** | FastAPI (Python 3.12) |
+| **ORM & Migrations** | SQLAlchemy 2 + Alembic |
+| **Database** | PostgreSQL 16 |
+| **Cache & Message Broker** | Redis 7 + Celery 5 |
+| **Data Collection** | httpx, BeautifulSoup4, lxml, trafilatura, Playwright |
+| **Frontend Framework** | React 19 + TypeScript + Vite |
+| **UI Component Library** | Ant Design 5 |
+| **State Management** | TanStack Query |
+| **Form Validation** | React Hook Form + Zod |
+| **Logging** | structlog |
+| **Quality** | pytest, Ruff, mypy |
+| **Infrastructure** | Docker Compose |
 
-## 技术栈
+---
 
-| 层 | 技术 |
-|---|---|
-| 后端框架 | FastAPI (Python 3.12) |
-| ORM | SQLAlchemy 2 + Alembic |
-| 数据库 | PostgreSQL 16 |
-| 缓存/消息 | Redis 7 + Celery 5 |
-| 数据采集 | httpx + BeautifulSoup4 + trafilatura + Playwright |
-| 前端框架 | React 19 + TypeScript + Vite |
-| UI 组件 | Ant Design 5 |
-| 状态管理 | TanStack Query |
-| 日志 | structlog |
-| 部署 | Docker Compose |
-
-## 开发策略
-
-1. **先完成最小闭环**，不做临时 Demo
-2. 第一阶段优先：链接录入 → 合规校验 → 网页采集 → 内容清洗 → AI 抽取 → 入库 → 飞书同步 → 简报生成
-3. 后续迭代：仪表盘、RBAC、竞品对比、PDF 导出
-
-## 目录结构
+## Project Structure
 
 ```
 cpis-v1/
 ├── backend/
 │   ├── app/
-│   │   ├── api/          # API 路由
-│   │   ├── core/         # 配置、日志、数据库
-│   │   ├── models/       # SQLAlchemy 模型
-│   │   ├── schemas/      # Pydantic 校验
-│   │   ├── repositories/ # 数据访问层
-│   │   ├── services/     # 业务逻辑
-│   │   ├── collectors/   # 网页采集
-│   │   ├── cleaners/     # 内容清洗
-│   │   ├── extractors/   # AI 抽取
-│   │   ├── analyzers/    # 分析
-│   │   ├── integrations/ # 飞书等外部集成
-│   │   ├── tasks/        # Celery 任务
-│   │   └── prompts/      # AI Prompt
-│   ├── alembic/          # 数据库迁移
-│   └── tests/
+│   │   ├── api/            # API routes
+│   │   ├── core/           # Configuration, logging, database
+│   │   ├── models/         # SQLAlchemy ORM models
+│   │   ├── schemas/        # Pydantic validation schemas
+│   │   ├── repositories/   # Data access layer
+│   │   ├── services/       # Business logic orchestration
+│   │   ├── collectors/     # Web collection runtimes (HTTP, Playwright, RSS, PDF, API)
+│   │   ├── cleaners/       # HTML→text, noise removal
+│   │   ├── extractors/     # AI-based structured extraction
+│   │   ├── analyzers/      # Diff/changelog analysis
+│   │   ├── integrations/   # Feishu Bitable sync
+│   │   ├── tasks/          # Celery async task definitions
+│   │   └── prompts/        # Versioned LLM system prompts
+│   ├── alembic/            # Database migrations
+│   ├── scripts/            # Utility scripts (seed_demo.py, etc.)
+│   └── tests/              # Backend test suite
 ├── frontend/
 │   └── src/
-│       ├── api/          # API 调用
-│       ├── components/   # 通用组件
-│       ├── features/     # 业务模块
-│       ├── layouts/      # 布局
-│       ├── routes/       # 路由
-│       ├── stores/       # 状态管理
-│       └── types/        # TS 类型
-├── docker-compose.yml
-└── .env.example
+│       ├── api/            # API client calls
+│       ├── components/     # Shared UI components
+│       ├── features/       # Business feature modules
+│       ├── layouts/        # Page layouts
+│       ├── routes/         # Route definitions
+│       ├── stores/         # State management
+│       └── types/          # TypeScript type definitions
+├── scripts/                # Start/stop scripts for demo, backend, frontend, worker
+├── release/                # Release documentation (QUICK_START.md, DEMO_SCRIPT.md, DEPLOYMENT_GUIDE.md, CHANGELOG.md, LICENSE.md, RELEASE_NOTES.md)
+├── docs/                   # Phase execution plans and audit reports
+├── docker-compose.yml      # Full system composition
+├── docker-compose.demo.yml # Demo-optimized composition
+└── .env.example            # Environment variable template
 ```
 
-## V1 明确不做
+---
 
-- 不绕过登录、验证码、付费墙和反爬机制
-- 不做代理池和高并发爬虫
-- 不采集私域、客户、个人敏感信息
-- 不做自动发布营销内容
-- 不做无人工复核的高风险业务决策
-- 不做完整知识库问答
-- 不做企业级 SSO
+## Development
+
+- **Backend:** `cd backend && poetry install && uvicorn app.main:app --reload`
+- **Frontend:** `cd frontend && npm install && npm run dev`
+- **Tests:** `cd backend && pytest`
+- **Lint:** `cd backend && ruff check . && mypy .`
+- **Migrations:** `cd backend && alembic upgrade head`
+
+See [docs/](./docs/) for detailed development node execution plans and phase evidence.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [release/LICENSE.md](release/LICENSE.md) for details.

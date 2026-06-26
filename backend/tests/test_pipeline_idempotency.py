@@ -95,7 +95,7 @@ class TestCollectUrlIdempotent:
             with (
                 patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
                 patch(
-                    "app.tasks.collection._collector_selector.fetch",
+                    "app.collectors.direct_http.DirectHttpCollector.fetch",
                     new=AsyncMock(return_value=fetch_result),
                 ),
                 patch("app.tasks.collection.clean_content.delay"),
@@ -202,7 +202,7 @@ class TestFullPipelineIdempotent:
             with (
                 patch("app.tasks.collection.get_celery_session",
                       return_value=_mock_celery_session_cm(db_session)),
-                patch("app.tasks.collection._collector_selector.fetch",
+                patch("app.collectors.direct_http.DirectHttpCollector.fetch",
                       new=AsyncMock(return_value=fetch_result)),
                 patch("app.tasks.collection.clean_content.delay"),
             ):
@@ -304,7 +304,7 @@ class TestFullPipelineIdempotent:
         with (
             patch("app.tasks.collection.get_celery_session",
                   return_value=_mock_celery_session_cm(db_session)),
-            patch("app.tasks.collection._collector_selector.fetch",
+            patch("app.collectors.direct_http.DirectHttpCollector.fetch",
                   new=AsyncMock(return_value=fetch_result)),
             patch("app.tasks.collection.clean_content.delay"),
         ):
@@ -345,7 +345,7 @@ class TestFullPipelineIdempotent:
         with (
             patch("app.tasks.collection.get_celery_session",
                   return_value=_mock_celery_session_cm(db_session)),
-            patch("app.tasks.collection._collector_selector.fetch",
+            patch("app.collectors.direct_http.DirectHttpCollector.fetch",
                   new=AsyncMock(return_value=fetch_result)),
             patch("app.tasks.collection.clean_content.delay"),
         ):
@@ -386,7 +386,7 @@ class TestFullPipelineIdempotent:
         with (
             patch("app.tasks.collection.get_celery_session",
                   return_value=_mock_celery_session_cm(db_session)),
-            patch("app.tasks.collection._collector_selector.fetch",
+            patch("app.collectors.direct_http.DirectHttpCollector.fetch",
                   new=AsyncMock(return_value=fetch_result)),
             patch("app.tasks.collection.clean_content.delay"),
         ):
@@ -484,7 +484,7 @@ class TestInsertTracking:
             with (
                 patch("app.tasks.collection.get_celery_session",
                       return_value=_mock_celery_session_cm(db_session)),
-                patch("app.tasks.collection._collector_selector.fetch",
+                patch("app.collectors.direct_http.DirectHttpCollector.fetch",
                       new=AsyncMock(return_value=fetch_result)),
                 patch("app.tasks.collection.clean_content.delay"),
             ):
@@ -597,7 +597,7 @@ class TestStatusTransitionsIdempotent:
         with (
             patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
             patch(
-                "app.tasks.collection._collector_selector.fetch",
+                "app.collectors.direct_http.DirectHttpCollector.fetch",
                 new=AsyncMock(return_value=fetch_result),
             ),
             patch("app.tasks.collection.clean_content.delay"),

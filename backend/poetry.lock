@@ -658,6 +658,21 @@ files = [
 toml = ["tomli ; python_full_version <= \"3.11.0a6\""]
 
 [[package]]
+name = "croniter"
+version = "6.2.2"
+description = "croniter provides iteration for datetime object with cron like format"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "croniter-6.2.2-py3-none-any.whl", hash = "sha256:a5d17b1060974d36251ea4faf388233eca8acf0d09cbd92d35f4c4ac8f279960"},
+    {file = "croniter-6.2.2.tar.gz", hash = "sha256:ba60832a5ec8e12e51b8691c3309a113d1cf6526bdf1a48150ce8ec7a532d0ab"},
+]
+
+[package.dependencies]
+python-dateutil = "*"
+
+[[package]]
 name = "dateparser"
 version = "1.4.0"
 description = "Date parsing library designed to parse dates from HTML pages"
@@ -2909,4 +2924,4 @@ dev = ["aiosqlite", "httpx", "mypy", "pre-commit", "pytest", "pytest-asyncio", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "56ab52d0d9cf2783493f590b054ab025fa3087f598bb59d4645df9a27c13c17c"
+content-hash = "b591c8f91b30c4760d0f05db7b5f235334b529e2010dd118b0bcfd7d47830355"

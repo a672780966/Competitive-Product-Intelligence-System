@@ -79,7 +79,7 @@ class TestCollectStageFailures:
         with (
             patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
             patch(
-                "app.tasks.collection._collector_selector.fetch",
+                "app.collectors.direct_http.DirectHttpCollector.fetch",
                 new=AsyncMock(return_value=fetch_result),
             ),
         ):
@@ -125,7 +125,7 @@ class TestCollectStageFailures:
         with (
             patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
             patch(
-                "app.tasks.collection._collector_selector.fetch",
+                "app.collectors.direct_http.DirectHttpCollector.fetch",
                 new=AsyncMock(return_value=fetch_result),
             ),
         ):
@@ -269,7 +269,7 @@ class TestCeleryRetry:
         with (
             patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
             patch(
-                "app.tasks.collection._collector_selector.fetch",
+                "app.collectors.direct_http.DirectHttpCollector.fetch",
                 new=AsyncMock(side_effect=RuntimeError("Unexpected crash")),
             ),
         ):

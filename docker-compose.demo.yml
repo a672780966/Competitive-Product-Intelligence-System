@@ -1,0 +1,82 @@
+version: "3.9"
+
+x-backend-defaults: &backend-defaults
+  build:
+    context: ./backend
+  env_file:
+    - .env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+  networks:
+    - cpis-demo-net
+
+services:
+  # --- PostgreSQL ---
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cpis
+      POSTGRES_USER: cpis
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cpis}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cpis -d cpis"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - cpis-demo-net
+
+  # --- Redis ---
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - cpis-demo-net
+
+  # --- FastAPI Backend ---
+  backend:
+    <<: *backend-defaults
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  # --- Celery Worker ---
+  celery-worker:
+    <<: *backend-defaults
+    command: celery -A app.tasks.worker worker --loglevel=info
+    deploy:
+      replicas: 1
+
+  # --- Frontend ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - cpis-demo-net
+
+networks:
+  cpis-demo-net:
+    driver: bridge
+
+volumes:
+  pgdata:

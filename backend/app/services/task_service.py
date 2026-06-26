@@ -19,6 +19,7 @@ from app.core.logging import get_logger
 from app.models import CollectionTask, AuditLog
 from app.models.enums import TaskPriority, TaskStatus
 from app.repositories.task_repository import TaskRepository
+from app.schemas.collector_execution_report import CollectorExecutionReportResponse
 from app.schemas.task import (
     BatchCreateTaskRequest,
     CreateTaskRequest,
@@ -97,11 +98,14 @@ class TaskService:
     # ── Query ───────────────────────────────────────────────────
 
     async def get_task(self, task_id: uuid.UUID) -> TaskDetailResponse | None:
-        """Get task detail with event history."""
+        """Get task detail with event history and execution reports."""
         task = await self._repo.get_by_id_with_events(task_id)
         if task is None:
             return None
-        return self._task_to_detail(task)
+        detail = self._task_to_detail(task)
+        reports = await self._repo.get_execution_reports(task_id)
+        detail.execution_reports = [CollectorExecutionReportResponse.model_validate(r) for r in reports]
+        return detail
 
     async def list_tasks(self, query: TaskListQuery) -> PaginatedTaskResponse:
         """List tasks with filters and pagination."""

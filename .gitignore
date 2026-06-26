@@ -32,3 +32,27 @@ pgdata/
 
 # Logs
 *.log
+=== .gitignore additions ===
+
+# Release build artifacts
+release-artifacts/
+
+# Development planning artifacts (Hermes/Codex workflow)
+CODEX_*.md
+CPIS_V1_*.md
+GITHUB_*.md
+OPENCLAW_*.md
+OPENCODE_*.md
+PHASE_I_RESET_*.md
+POST_*.md
+PRE_*.md
+PRODUCT_*.md
+REVIEW_*.md
+TASKS_*.md
+V1_*.md
+ACCELERATION_*.md
+
+# Runtime generated files
+backend/mcp_server.py
+backend/mcp_config.example.json
+openclaw-plugins/cpis-json-gate/dist/index.js

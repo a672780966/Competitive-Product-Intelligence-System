@@ -70,6 +70,21 @@ export default function TaskDetailPage() {
         </Descriptions>
       </Card>
 
+      {task.execution_reports && task.execution_reports.length > 0 && (
+        <Card title="采集报告" style={{ marginBottom: 16 }}>
+          {task.execution_reports.map((r: { id: string; collector_runtime: string; status: string; duration_ms: number | null; content_size: number | null; error_message: string | null; started_at: string }) => (
+            <Descriptions key={r.id} column={2} size="small" style={{ marginBottom: 8 }}>
+              <Descriptions.Item label="采集器">{r.collector_runtime}</Descriptions.Item>
+              <Descriptions.Item label="状态"><Tag color={statusColors[r.status]}>{statusLabels[r.status] || r.status}</Tag></Descriptions.Item>
+              {r.duration_ms != null && <Descriptions.Item label="耗时">{r.duration_ms}ms</Descriptions.Item>}
+              {r.content_size != null && <Descriptions.Item label="内容大小">{r.content_size} bytes</Descriptions.Item>}
+              {r.error_message && <Descriptions.Item label="错误信息">{r.error_message}</Descriptions.Item>}
+              <Descriptions.Item label="开始时间">{new Date(r.started_at).toLocaleString("zh-CN")}</Descriptions.Item>
+            </Descriptions>
+          ))}
+        </Card>
+      )}
+
       <Card title="事件日志" style={{ marginBottom: 16 }}>
         {task.events && task.events.length > 0 ? (
           <Timeline items={task.events.map((e: { stage: string; status: string; message: string | null; created_at: string }) => ({

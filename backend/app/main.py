@@ -11,8 +11,13 @@ from app.api import router as health_router
 from app.api.products import router as products_router
 from app.api.reports import router as reports_router
 from app.api.reviews import router as reviews_router
+from app.api.openclaw import router as openclaw_router
 from app.api.sync import router as sync_router
 from app.api.tasks import router as tasks_router
+from app.api.discovery import router as discovery_router
+from app.api.collection_templates import router as collection_templates_router
+from app.api.scheduled_collections import router as scheduled_collections_router
+from app.api.usage import router as usage_router
 from app.core import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
@@ -61,7 +66,12 @@ def create_app() -> FastAPI:
     app.include_router(reviews_router)
     app.include_router(reports_router)
     app.include_router(products_router)
+    app.include_router(openclaw_router)
     app.include_router(sync_router)
+    app.include_router(discovery_router)
+    app.include_router(collection_templates_router)
+    app.include_router(scheduled_collections_router)
+    app.include_router(usage_router)
 
     @app.get("/")
     async def root() -> dict[str, str]:

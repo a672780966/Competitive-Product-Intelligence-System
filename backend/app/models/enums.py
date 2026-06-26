@@ -75,3 +75,62 @@ class TaskStage(str, enum.Enum):
     REVIEW = "review"
     SYNC = "sync"
     REPORT = "report"
+
+
+class DiscoveryStatus(str, enum.Enum):
+    """Lifecycle status for a source discovery session."""
+
+    CREATED = "created"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class SourceType(str, enum.Enum):
+    """Classification of a discovered source URL."""
+
+    OFFICIAL_HOMEPAGE = "official_homepage"
+    PRODUCT_DETAIL = "product_detail"
+    DOCUMENTATION = "documentation"
+    NEWS = "news"
+    REVIEW = "review"
+    FORUM = "forum"
+    SOCIAL = "social"
+    OTHER = "other"
+
+
+class RecommendedCollector(str, enum.Enum):
+    """Recommended collector kind for a source candidate."""
+
+    DIRECT_HTTP = "direct_http"
+    PLAYWRIGHT = "playwright"
+    SCRAPLING_FEATURE_FLAG = "scrapling_feature_flag"
+    CRAWL4AI_FEATURE_FLAG = "crawl4ai_feature_flag"
+    REQUIRES_CONFIRMATION = "requires_confirmation"
+
+
+class RiskLevel(str, enum.Enum):
+    """Risk classification for a source candidate."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    BLOCKED = "blocked"
+
+
+class CollectionTemplateStatus(str, enum.Enum):
+    """Lifecycle status for a collection template."""
+
+    ACTIVE = "active"
+    PAUSED = "paused"
+    ARCHIVED = "archived"
+
+
+class ScheduleType(str, enum.Enum):
+    """Type of schedule for a scheduled collection."""
+
+    CRON = "cron"
+    INTERVAL = "interval"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"

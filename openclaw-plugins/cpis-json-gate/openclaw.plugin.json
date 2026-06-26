@@ -4,5 +4,6 @@
   "description": "Blocks malformed JSON and invalid routes in CPIS sessions_send calls.",
   "version": "1.2.0",
   "activation": {"onStartup": true},
-  "configSchema": {"type": "object", "additionalProperties": false, "properties": {}}
+  "configSchema": {"type": "object", "additionalProperties": false, "properties": {}},
+  "compat": {"minGatewayVersion": "2026.3.8"}
 }

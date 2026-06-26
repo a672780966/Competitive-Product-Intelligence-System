@@ -11,6 +11,17 @@ import type {
   TaskDetailResponse,
   TaskEventResponse,
   TaskResponse,
+  SessionDetailResponse,
+  PaginatedDiscoverySessionResponse,
+  CreateTemplateFromSelectionResponse,
+  PaginatedTemplateResponse,
+  CollectionTemplate,
+  TemplateRunResponse,
+  PaginatedScheduledCollectionResponse,
+  ScheduledCollection,
+  ScheduledCollectionDetailResponse,
+  UsageDailyStatListResponse,
+  UsageSummaryResponse,
 } from "../types";
 
 const BASE = "";
@@ -131,4 +142,90 @@ export const reportsApi = {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.text();
   },
+};
+
+// ── Discovery ────────────────────────────────────────────────────
+export const discoveryApi = {
+  createSession: (body: { query: string; target_brand?: string; topic?: string }) =>
+    request<SessionDetailResponse>("/api/v1/discovery/sessions", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  listSessions: (params?: string) =>
+    request<PaginatedDiscoverySessionResponse>(`/api/v1/discovery/sessions?${params || ""}`),
+
+  getSession: (id: string) =>
+    request<SessionDetailResponse>(`/api/v1/discovery/sessions/${id}`),
+
+  getCandidates: (sessionId: string, params?: string) =>
+    request<{ items: import("../types").SourceCandidate[]; total: number; page: number; page_size: number; total_pages: number }>(
+      `/api/v1/discovery/sessions/${sessionId}/candidates?${params || ""}`,
+    ),
+
+  updateCandidate: (candidateId: string, selected: boolean) =>
+    request<import("../types").SourceCandidate>(
+      `/api/v1/discovery/candidates/${candidateId}`,
+      { method: "PATCH", body: JSON.stringify({ selected }) },
+    ),
+
+  batchSelect: (sessionId: string, candidateIds: string[], selected: boolean) =>
+    request<{ updated: number; selected: boolean }>(
+      `/api/v1/discovery/sessions/${sessionId}/select`,
+      { method: "POST", body: JSON.stringify({ candidate_ids: candidateIds, selected }) },
+    ),
+
+  createTemplate: (sessionId: string, body: { name: string; description?: string; feishu_sync_enabled?: boolean }) =>
+    request<CreateTemplateFromSelectionResponse>(
+      `/api/v1/discovery/sessions/${sessionId}/create-template`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+};
+
+// ── Collection Templates ─────────────────────────────────────────
+export const templatesApi = {
+  list: (params?: string) =>
+    request<PaginatedTemplateResponse>(`/api/v1/collection-templates?${params || ""}`),
+
+  get: (id: string) =>
+    request<CollectionTemplate>(`/api/v1/collection-templates/${id}`),
+
+  update: (id: string, body: { name?: string; description?: string; status?: string }) =>
+    request<CollectionTemplate>(`/api/v1/collection-templates/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  run: (id: string) =>
+    request<TemplateRunResponse>(`/api/v1/collection-templates/${id}/run`, { method: "POST" }),
+};
+
+// ── Scheduled Collections ────────────────────────────────────────
+export const schedulesApi = {
+  list: (params?: string) =>
+    request<PaginatedScheduledCollectionResponse>(`/api/v1/scheduled-collections?${params || ""}`),
+
+  get: (id: string) =>
+    request<ScheduledCollectionDetailResponse>(`/api/v1/scheduled-collections/${id}`),
+
+  create: (body: { template_id: string; schedule_type?: string; cron_expr?: string; interval_minutes?: number; enabled?: boolean }) =>
+    request<ScheduledCollection>(`/api/v1/scheduled-collections`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  update: (id: string, body: { schedule_type?: string; cron_expr?: string; interval_minutes?: number; enabled?: boolean }) =>
+    request<ScheduledCollection>(`/api/v1/scheduled-collections/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+};
+
+// ── Usage ────────────────────────────────────────────────────────
+export const usageApi = {
+  daily: (params?: string) =>
+    request<UsageDailyStatListResponse>(`/api/v1/usage/daily?${params || ""}`),
+
+  summary: (params?: string) =>
+    request<UsageSummaryResponse>(`/api/v1/usage/summary?${params || ""}`),
 };

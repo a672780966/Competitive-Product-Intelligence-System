@@ -1,65 +1,167 @@
 """
-CPIS V1 — CollectorSelector: strategy pattern for fetching.
+CPIS V1 — CollectorSelector: strategy pattern for collector selection.
 
-Flow:
-1. Try HttpxCollector first (fast, no overhead).
-2. If content is suspicious (login page, captcha, or JS-heavy),
-   it still returns the HTML — we just note the heuristic.
-3. If HttpxCollector fails with a transient error (timeout, DNS),
-   fall back to PlaywrightCollector for JS rendering.
-4. If both fail, return the HttpxCollector error.
+The new CollectorSelector is a pure selector: it decides *which* collector
+to use based on source metadata (URL, source_type, risk_level) and
+feature flags from the CollectorRuntimeRegistry.
 
-The decision to fall back to Playwright is based on:
-- Empty or very short raw_html (< 2 KB often means JS-required page)
-- HTTP 403/503 → try Playwright
+Legacy ``fetch()`` method is retained for backward compatibility with
+existing task code in ``app.tasks.collection``.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from urllib.parse import urlparse
 
 from app.collectors.base import CollectResult, FetchErrorCode
 from app.collectors.domain_lock import DomainConcurrencyLimiter
-from app.collectors.httpx_collector import HttpxCollector
-from app.collectors.playwright_collector import PlaywrightCollector
+from app.collectors.registry import (
+    BaseCollectorProvider,
+    CollectorRuntimeRegistry,
+    get_collector_registry,
+)
 
 _MIN_HTML_FOR_USEFUL = 2048  # 2 KB
 
 
-class CollectorSelector:
-    """Selects and executes the appropriate collector strategy."""
+@dataclass
+class SelectResult:
+    """Result of a collector selection operation."""
 
-    def __init__(self, max_per_domain: int = 2) -> None:
-        self._httpx = HttpxCollector()
-        self._playwright = PlaywrightCollector()
+    collector_kind: str
+    runtime: BaseCollectorProvider | None
+    reason: str
+
+
+class CollectorSelector:
+    """Selects the appropriate collector based on source metadata and feature flags.
+
+    Args:
+        max_per_domain: Max concurrent requests per domain (legacy, kept for compat).
+        registry: CollectorRuntimeRegistry instance. Uses singleton if not provided.
+    """
+
+    def __init__(
+        self,
+        max_per_domain: int = 2,
+        registry: CollectorRuntimeRegistry | None = None,
+    ) -> None:
+        self._registry = registry or get_collector_registry()
         self._limiter = DomainConcurrencyLimiter(max_per_domain=max_per_domain)
 
-    async def fetch(self, url: str, *, timeout: int = 20) -> CollectResult:
-        """Fetch a URL, falling back to Playwright if httpx fails.
+    def select(
+        self,
+        url: str,
+        source_type: str = "other",
+        risk_level: str = "low",
+    ) -> SelectResult:
+        """Select the appropriate collector for a given URL / source metadata.
 
         Args:
-            url: The URL to fetch.
-            timeout: Per-request timeout in seconds.
+            url: The target URL (used for domain extraction).
+            source_type: Source type categorisation (e.g. "product_detail").
+            risk_level: Risk level ("low", "medium", "high", "blocked").
 
         Returns:
-            A normalised CollectResult.
+            A SelectResult with the chosen collector kind, runtime, and reason.
         """
-        domain = _extract_domain(url)
+        # Blocked sources always return the "blocked" kind
+        if risk_level == "blocked":
+            return SelectResult(
+                collector_kind="blocked",
+                runtime=None,
+                reason="Source risk level is 'blocked' — no collector allowed",
+            )
 
-        async with self._limiter.limit(domain):
-            # Step 1: try httpx
-            result = await self._httpx.fetch(url, timeout=timeout)
+        # direct_http is the only default-enabled collector
+        if self._registry.is_enabled("direct_http"):
+            return SelectResult(
+                collector_kind="direct_http",
+                runtime=self._registry.get_provider("direct_http"),
+                reason="Default collector: direct_http",
+            )
 
-            # Step 2: check if we should fall back to Playwright
-            if _should_use_playwright(result):
-                pw_result = await self._playwright.fetch(url, timeout=timeout + 10)
-                if pw_result.success:
-                    return pw_result
+        # Fallback: try other feature-gated collectors (in order)
+        for kind in self._registry.get_supported_kinds():
+            if kind in ("blocked", "direct_http"):
+                continue
+            if not self._registry.is_enabled(kind):
+                continue
+            # Check that this collector kind supports the requested source_type
+            meta = self._registry.get_metadata(kind)
+            if meta and source_type not in meta.supported_source_types:
+                continue
+            provider = self._registry.get_provider(kind)
+            if provider is not None:
+                return SelectResult(
+                    collector_kind=kind,
+                    runtime=provider,
+                    reason=f"Fallback collector: {kind}",
+                )
 
-                # Playwright also failed — return original httpx error
-                return result
+        # Ultimate fallback — no provider available
+        return SelectResult(
+            collector_kind="direct_http",
+            runtime=None,
+            reason="No collector available",
+        )
 
-            return result
+    async def fetch(self, url: str, *, timeout: int = 20) -> CollectResult:
+        """Legacy: select collector and execute fetch.
+
+        This method wraps ``select()`` + runtime execution for backward
+        compatibility with ``app.tasks.collection``. New code should
+        use ``select()`` to get the collector, then call ``fetch()``
+        on the returned runtime directly.
+
+        Returns:
+            A legacy ``base.CollectResult``.
+        """
+        sel = self.select(url, source_type="other", risk_level="low")
+
+        if sel.collector_kind == "blocked" or sel.runtime is None:
+            return CollectResult(
+                success=False,
+                error_code=FetchErrorCode.FETCH_HTTP_ERROR,
+                error_message=sel.reason,
+            )
+
+        try:
+            reg_result = await sel.runtime.fetch(url, timeout=timeout)
+
+            legacy_code: FetchErrorCode | None = None
+            if reg_result.error_code:
+                try:
+                    legacy_code = FetchErrorCode(reg_result.error_code)
+                except ValueError:
+                    legacy_code = FetchErrorCode.FETCH_HTTP_ERROR
+
+            return CollectResult(
+                success=reg_result.success,
+                final_url=reg_result.final_url,
+                http_status=reg_result.http_status,
+                page_title=reg_result.page_title,
+                raw_html=reg_result.raw_html,
+                response_headers=reg_result.response_headers,
+                content_hash=reg_result.content_hash,
+                error_code=legacy_code,
+                error_message=reg_result.error_message,
+                fetch_time_ms=reg_result.fetch_time_ms,
+                used_playwright=(sel.collector_kind == "playwright"),
+            )
+        except NotImplementedError:
+            return CollectResult(
+                success=False,
+                error_code=FetchErrorCode.FETCH_HTTP_ERROR,
+                error_message=f"Collector '{sel.collector_kind}' is not enabled",
+            )
+        except Exception as exc:
+            return CollectResult(
+                success=False,
+                error_code=FetchErrorCode.FETCH_HTTP_ERROR,
+                error_message=str(exc),
+            )
 
 
 def _extract_domain(url: str) -> str:
@@ -72,6 +174,10 @@ def _extract_domain(url: str) -> str:
 
 def _should_use_playwright(result: CollectResult) -> bool:
     """Decide whether to fall back to Playwright rendering.
+
+    .. deprecated::
+        This function is kept for backward compatibility only.
+        The new CollectorSelector does not use it.
 
     Returns True if:
     - HTTP 403 or 503 (transient / WAF — JS may help)

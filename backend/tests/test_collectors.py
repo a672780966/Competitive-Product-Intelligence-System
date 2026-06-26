@@ -14,7 +14,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from app.collectors.base import CollectResult, FetchErrorCode
 from app.collectors.domain_lock import DomainConcurrencyLimiter
 from app.collectors.httpx_collector import HttpxCollector, _extract_title, _hash_content
-from app.collectors.playwright_collector import PlaywrightCollector
+try:
+    from app.collectors.playwright_collector import PlaywrightCollector
+except ImportError:
+    PlaywrightCollector = None  # type: ignore[assignment,misc]
+from app.collectors.registry import CollectorRuntimeRegistry
 from app.collectors.selector import CollectorSelector, _should_use_playwright
 
 
@@ -237,44 +241,33 @@ class TestShouldUsePlaywright:
 
 
 class TestCollectorSelector:
-    @patch.object(HttpxCollector, "fetch")
-    async def test_httpx_success_returns_directly(self, mock_httpx_fetch):
-        """When httpx succeeds, no Playwright fallback is attempted."""
-        mock_httpx_fetch.return_value = CollectResult(
-            success=True, raw_html=b"<html><body>OK</body></html>",
-        )
-        selector = CollectorSelector(max_per_domain=5)
-        result = await selector.fetch("https://example.com/page")
-        assert result.success is True
+    """Tests for the new CollectorSelector (select + legacy fetch)."""
 
-    @patch.object(HttpxCollector, "fetch")
-    @patch.object(PlaywrightCollector, "fetch")
-    async def test_httpx_403_falls_back_to_playwright(self, mock_pw_fetch, mock_httpx_fetch):
-        """HTTP 403 from httpx triggers Playwright fallback."""
-        mock_httpx_fetch.return_value = CollectResult(
-            success=False, http_status=403, raw_html=b"",
-        )
-        mock_pw_fetch.return_value = CollectResult(
-            success=True, raw_html=b"<html><body>Rendered OK</body></html>",
-            used_playwright=True,
-        )
-        selector = CollectorSelector(max_per_domain=5)
-        result = await selector.fetch("https://example.com/page")
-        assert result.success is True
-        assert result.used_playwright is True
+    def test_select_returns_direct_http_by_default(self):
+        """Default selection returns direct_http when risk is not blocked."""
+        selector = CollectorSelector()
+        result = selector.select("https://example.com/page")
+        assert result.collector_kind == "direct_http"
+        assert result.runtime is not None
+        assert "direct_http" in result.reason
 
-    @patch.object(HttpxCollector, "fetch")
-    @patch.object(PlaywrightCollector, "fetch")
-    async def test_both_collectors_fail_returns_httpx_error(self, mock_pw_fetch, mock_httpx_fetch):
-        """When both collectors fail, return the httpx error."""
-        mock_httpx_fetch.return_value = CollectResult(
-            success=False, http_status=403, error_message="Forbidden",
-        )
-        mock_pw_fetch.return_value = CollectResult(
-            success=False, error_code=FetchErrorCode.PLAYWRIGHT_ERROR,
-            error_message="Browser crash",
-        )
-        selector = CollectorSelector(max_per_domain=5)
-        result = await selector.fetch("https://example.com/page")
-        assert result.success is False
-        assert result.error_message == "Forbidden"  # httpx error, not playwright
+    def test_select_blocked_returns_blocked_kind(self):
+        """Blocked risk level returns the blocked collector kind."""
+        selector = CollectorSelector()
+        result = selector.select("https://example.com/page", risk_level="blocked")
+        assert result.collector_kind == "blocked"
+        assert result.runtime is None
+
+    @patch("app.collectors.registry.CollectorRuntimeRegistry.is_enabled")
+    async def test_fetch_with_mocked_direct_http(self, mock_is_enabled):
+        """Legacy fetch delegates to the selected collector."""
+        mock_is_enabled.return_value = True
+        registry = CollectorRuntimeRegistry()
+        selector = CollectorSelector(registry=registry)
+        with patch.object(registry.get_provider("direct_http"), "fetch") as mock_fetch:
+            mock_fetch.return_value = CollectResult(
+                success=True, raw_html=b"<html><body>OK</body></html>",
+                error_code=None,
+            )
+            result = await selector.fetch("https://example.com/page")
+            assert result.success is True

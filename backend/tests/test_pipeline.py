@@ -97,7 +97,7 @@ class TestCollectStage:
         with (
             patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
             patch(
-                "app.tasks.collection._collector_selector.fetch",
+                "app.collectors.direct_http.DirectHttpCollector.fetch",
                 new=AsyncMock(return_value=fetch_result),
             ),
             patch("app.tasks.collection.clean_content.delay") as mock_delay,
@@ -116,7 +116,7 @@ class TestCollectStage:
         assert task.status == TaskStatus.COMPLETED.value
         mock_delay.assert_called_once_with(task_id)
         assert result["status"] == "completed"
-        assert result["collector"] == "httpx"
+        assert result["collector"] == "direct_http"
         assert result["size"] == len(SAMPLE_HTML)
 
     @pytest.mark.asyncio
@@ -145,7 +145,7 @@ class TestCollectStage:
         with (
             patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
             patch(
-                "app.tasks.collection._collector_selector.fetch",
+                "app.collectors.direct_http.DirectHttpCollector.fetch",
                 new=AsyncMock(return_value=fetch_result),
             ),
         ):
@@ -180,7 +180,7 @@ class TestCollectStage:
 
         with (
             patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
-            patch("app.collectors.httpx_collector.httpx.AsyncClient") as mock_client_cls,
+            patch("app.collectors.direct_http.httpx.AsyncClient") as mock_client_cls,
             patch("app.tasks.collection.clean_content.delay"),
         ):
             mock_client = AsyncMock()
@@ -196,7 +196,7 @@ class TestCollectStage:
         assert snapshot is not None
         assert snapshot.raw_html == SAMPLE_HTML
         assert result["status"] == "completed"
-        assert result["collector"] == "httpx"
+        assert result["collector"] == "direct_http"
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -466,7 +466,7 @@ class TestPipelineChain:
         with (
             patch("app.tasks.collection.get_celery_session", return_value=mock_cm),
             patch(
-                "app.tasks.collection._collector_selector.fetch",
+                "app.collectors.direct_http.DirectHttpCollector.fetch",
                 new=AsyncMock(return_value=fetch_result),
             ),
             patch("app.tasks.collection.clean_content.delay"),

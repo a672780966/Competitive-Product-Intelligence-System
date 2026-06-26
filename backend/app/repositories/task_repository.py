@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import CollectionTask, TaskEvent
+from app.models.collector_execution_report import CollectorExecutionReport
 from app.models.enums import TaskStatus
 
 
@@ -173,5 +174,16 @@ class TaskRepository:
             select(TaskEvent)
             .where(TaskEvent.task_id == task_id)
             .order_by(TaskEvent.created_at.asc()),
+        )
+        return list(result.scalars().all())
+
+    # ── CollectorExecutionReport ───────────────────────────────
+
+    async def get_execution_reports(self, task_id: uuid.UUID) -> list[CollectorExecutionReport]:
+        """Get all execution reports for a task, ordered by creation time."""
+        result = await self._db.execute(
+            select(CollectorExecutionReport)
+            .where(CollectorExecutionReport.task_id == task_id)
+            .order_by(CollectorExecutionReport.created_at.asc()),
         )
         return list(result.scalars().all())

@@ -7,6 +7,9 @@ import {
   CheckCircleOutlined,
   SyncOutlined,
   FileTextOutlined,
+  CompassOutlined,
+  FileAddOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 
@@ -19,6 +22,9 @@ const menuItems = [
   { key: "/reviews", icon: <CheckCircleOutlined />, label: "待复核" },
   { key: "/sync", icon: <SyncOutlined />, label: "同步记录" },
   { key: "/reports", icon: <FileTextOutlined />, label: "竞品简报" },
+  { key: "/discovery", icon: <CompassOutlined />, label: "来源发现" },
+  { key: "/collection-templates", icon: <FileAddOutlined />, label: "采集模板" },
+  { key: "/usage", icon: <BarChartOutlined />, label: "用量统计" },
 ];
 
 export default function AdminLayout() {

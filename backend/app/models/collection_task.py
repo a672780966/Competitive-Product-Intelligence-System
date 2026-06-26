@@ -30,6 +30,12 @@ class CollectionTask(Base, TimestampMixin):
     )
     category_hint: Mapped[str | None] = mapped_column(String(64))
     language_hint: Mapped[str | None] = mapped_column(String(16))
+    risk_level: Mapped[str | None] = mapped_column(
+        String(16), default="low", nullable=True,
+    )
+    source_type: Mapped[str | None] = mapped_column(
+        String(32), default="other", nullable=True,
+    )
     auto_sync_feishu: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

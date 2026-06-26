@@ -8,8 +8,14 @@ from __future__ import annotations
 
 from app.models.base import Base, TimestampMixin
 from app.models.enums import (
+    CollectionTemplateStatus,
+    DiscoveryStatus,
     ProductCategory,
+    RecommendedCollector,
     ReviewStatus,
+    RiskLevel,
+    ScheduleType,
+    SourceType,
     SyncStatus,
     TaskPriority,
     TaskStage,
@@ -26,11 +32,25 @@ from app.models.feishu_sync_record import FeishuSyncRecord
 from app.models.prompt_template import PromptTemplate
 from app.models.audit_log import AuditLog
 
+from app.models.source_discovery_session import SourceDiscoverySession
+from app.models.source_candidate import SourceCandidate
+from app.models.collection_template import CollectionTemplate
+from app.models.scheduled_collection import ScheduledCollection
+from app.models.usage_daily_stat import UsageDailyStat
+from app.models.search_history import SearchHistory
+from app.models.collector_execution_report import CollectorExecutionReport
+
 __all__ = [
     "Base",
     "TimestampMixin",
+    "CollectionTemplateStatus",
+    "DiscoveryStatus",
     "ProductCategory",
+    "RecommendedCollector",
     "ReviewStatus",
+    "RiskLevel",
+    "ScheduleType",
+    "SourceType",
     "SyncStatus",
     "TaskPriority",
     "TaskStage",
@@ -45,4 +65,11 @@ __all__ = [
     "FeishuSyncRecord",
     "PromptTemplate",
     "AuditLog",
+    "SourceDiscoverySession",
+    "SourceCandidate",
+    "CollectionTemplate",
+    "ScheduledCollection",
+    "UsageDailyStat",
+    "SearchHistory",
+    "CollectorExecutionReport",
 ]
