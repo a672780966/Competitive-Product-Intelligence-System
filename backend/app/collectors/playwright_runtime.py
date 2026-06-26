@@ -1,12 +1,16 @@
 """PlaywrightRuntimeCollector — wraps existing PlaywrightCollector.
 
 Gracefully degrades to DirectHttpCollector if Playwright is not available.
+When feature flag COLLECTOR_PLAYWRIGHT_ENABLED is False, returns a blocked
+result with failure intelligence instead of silently falling through.
 """
 from __future__ import annotations
 
 from typing import Any
 
+from app.collectors.failure_intelligence import FailureAnalysis
 from app.collectors.registry import BaseCollectorProvider, CollectResult
+from app.core import get_settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -17,6 +21,7 @@ class PlaywrightRuntimeCollector(BaseCollectorProvider):
 
     Uses the existing PlaywrightCollector if Playwright is installed.
     Gracefully degrades to DirectHttpCollector if not available or on error.
+    When the feature flag is disabled, returns a blocked CollectResult.
     """
 
     kind = "playwright"
@@ -33,7 +38,32 @@ class PlaywrightRuntimeCollector(BaseCollectorProvider):
         return DirectHttpCollector()
 
     async def fetch(self, url: str, **kwargs: Any) -> CollectResult:
-        """Fetch using Playwright if available, otherwise fallback to direct_http."""
+        """Fetch using Playwright if available, otherwise fallback to direct_http.
+
+        If the COLLECTOR_PLAYWRIGHT_ENABLED feature flag is disabled,
+        returns a blocked CollectResult with failure intelligence.
+        """
+        # Check feature flag first
+        settings = get_settings()
+        if not settings.COLLECTOR_PLAYWRIGHT_ENABLED:
+            logger.warning(
+                "playwright_feature_flag_disabled",
+                url=url,
+            )
+            return CollectResult(
+                success=False,
+                error_code="BLOCKED_SOURCE",
+                error_message="Playwright collector is disabled by feature flag COLLECTOR_PLAYWRIGHT_ENABLED=False",
+                collector_kind=self.kind,
+                failure_intelligence=FailureAnalysis(
+                    failure_type="blocked_source",
+                    retryable=False,
+                    suggested_next="skip_permanent",
+                    user_visible_message="Playwright 采集器被功能开关禁用",
+                    blocked_reason="Feature flag COLLECTOR_PLAYWRIGHT_ENABLED is disabled",
+                ),
+            )
+
         if self._playwright_available is None:
             self._playwright_available = self._check_playwright()
 

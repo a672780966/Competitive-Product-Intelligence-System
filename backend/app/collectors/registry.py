@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
+from app.collectors.failure_intelligence import FailureAnalysis
 from app.core import get_settings
 from app.core.logging import get_logger
 
@@ -36,6 +37,7 @@ class CollectResult:
     error_message: str = ""
     fetch_time_ms: int = 0
     collector_kind: str = "direct_http"
+    failure_intelligence: Optional[FailureAnalysis] = None
 
 
 @dataclass

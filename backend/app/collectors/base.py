@@ -1,5 +1,4 @@
-"""
-CPIS V1 — Base collector interface and shared types.
+"""CPIS V1 — Base collector interface and shared types.
 
 All collectors must implement ``fetch()`` and return a ``CollectResult``.
 """
@@ -9,6 +8,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Optional
+
+from app.collectors.failure_intelligence import FailureAnalysis
 
 
 class FetchErrorCode(str, Enum):
@@ -40,6 +42,7 @@ class CollectResult:
     error_message: str = ""
     fetch_time_ms: int = 0
     used_playwright: bool = False
+    failure_intelligence: Optional[FailureAnalysis] = None
 
 
 class BaseCollector(ABC):

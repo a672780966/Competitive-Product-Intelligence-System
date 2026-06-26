@@ -191,7 +191,10 @@ class TestCollectorRuntimeRegistry:
         with patch(
             "app.collectors.playwright_runtime.PlaywrightRuntimeCollector._check_playwright",
             return_value=False,
-        ), patch("app.collectors.direct_http.httpx.AsyncClient") as mock_client:
+        ), patch(
+            "app.collectors.playwright_runtime.get_settings",
+        ) as mock_settings, patch("app.collectors.direct_http.httpx.AsyncClient") as mock_client:
+            mock_settings.return_value.COLLECTOR_PLAYWRIGHT_ENABLED = True
             mock_response = AsyncMock()
             mock_response.status_code = 200
             mock_response.content = b"<html><title>Playwright fallback</title></html>"
@@ -437,8 +440,14 @@ class TestPlaywrightRuntimeCollector:
 
         collector = PlaywrightRuntimeCollector()
 
-        with patch.object(collector, "_check_playwright", return_value=False), \
-             patch.object(collector._fallback, "fetch", new_callable=AsyncMock) as mock_fallback:
+        with patch(
+            "app.collectors.playwright_runtime.get_settings",
+        ) as mock_settings, patch.object(
+            collector, "_check_playwright", return_value=False,
+        ), patch.object(
+            collector._fallback, "fetch", new_callable=AsyncMock,
+        ) as mock_fallback:
+            mock_settings.return_value.COLLECTOR_PLAYWRIGHT_ENABLED = True
             mock_fallback.return_value = CollectResult(success=True, collector_kind="direct_http")
 
             result = await collector.fetch("https://example.com")
@@ -451,8 +460,14 @@ class TestPlaywrightRuntimeCollector:
 
         collector = PlaywrightRuntimeCollector()
 
-        with patch.object(collector, "_check_playwright", return_value=True), \
-             patch.object(collector, "_do_playwright_fetch", new_callable=AsyncMock) as mock_fetch:
+        with patch(
+            "app.collectors.playwright_runtime.get_settings",
+        ) as mock_settings, patch.object(
+            collector, "_check_playwright", return_value=True,
+        ), patch.object(
+            collector, "_do_playwright_fetch", new_callable=AsyncMock,
+        ) as mock_fetch:
+            mock_settings.return_value.COLLECTOR_PLAYWRIGHT_ENABLED = True
             mock_fetch.return_value = CollectResult(
                 success=True,
                 raw_html=b"<html>Playwright content</html>",
@@ -469,9 +484,16 @@ class TestPlaywrightRuntimeCollector:
 
         collector = PlaywrightRuntimeCollector()
 
-        with patch.object(collector, "_check_playwright", return_value=True), \
-             patch.object(collector, "_do_playwright_fetch", side_effect=Exception("Playwright error")), \
-             patch.object(collector._fallback, "fetch", new_callable=AsyncMock) as mock_fallback:
+        with patch(
+            "app.collectors.playwright_runtime.get_settings",
+        ) as mock_settings, patch.object(
+            collector, "_check_playwright", return_value=True,
+        ), patch.object(
+            collector, "_do_playwright_fetch", side_effect=Exception("Playwright error"),
+        ), patch.object(
+            collector._fallback, "fetch", new_callable=AsyncMock,
+        ) as mock_fallback:
+            mock_settings.return_value.COLLECTOR_PLAYWRIGHT_ENABLED = True
             mock_fallback.return_value = CollectResult(success=True, collector_kind="direct_http")
 
             result = await collector.fetch("https://example.com")

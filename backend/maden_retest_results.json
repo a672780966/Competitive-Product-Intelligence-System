@@ -1,0 +1,75 @@
+{
+  "sitemap_urls": [
+    "https://www.madenwear.com/",
+    "https://www.madenwear.com/policy"
+  ],
+  "robots_sitemap": "https://www.madenwear.com/sitemap.xml",
+  "ddg_results": [],
+  "ddg_summary": {
+    "total": 0,
+    "safe": 0,
+    "blocked": 0
+  },
+  "maden_results": [
+    {
+      "url": "http://www.madenwear.com/",
+      "success": true,
+      "http_status": 200,
+      "final_url": "https://www.madenwear.com/",
+      "title": "首頁 - 馬登工裝",
+      "content_size": 26709
+    },
+    {
+      "url": "http://www.madenwear.com/policy",
+      "success": true,
+      "http_status": 200,
+      "final_url": "https://www.madenwear.com/policy",
+      "title": "隱私權政策 - 馬登工裝",
+      "content_size": 27052
+    },
+    {
+      "url": "http://www.madenwear.com/categories/all",
+      "success": true,
+      "http_status": 200,
+      "final_url": "https://www.madenwear.com/categories/all",
+      "title": "全部",
+      "content_size": 28311
+    }
+  ],
+  "baike": {
+    "success": false,
+    "http_status": 403,
+    "failure_type": "http_error",
+    "retryable": true,
+    "suggested_next": "retry_ua_rotate"
+  },
+  "smzdm": {
+    "success": true,
+    "http_status": 202,
+    "content_size": 209,
+    "effective_success": false,
+    "failure_type": "empty_content",
+    "suggested_next": "retry_playwright"
+  },
+  "failure_intelligence": {
+    "madenwear.com": {
+      "failure_type": "none",
+      "retryable": true,
+      "suggested_next": "use_verify_false",
+      "note": "DNS resolves, site accessible via HTTP→HTTPS with verify=False. Self-signed SSL cert."
+    },
+    "baike.baidu.com": {
+      "failure_type": "http_error",
+      "http_status": 403,
+      "retryable": true,
+      "suggested_next": "retry_playwright",
+      "note": "Baidu WAF blocks direct HTTP with 403. Enhanced UA rotation still fails. Needs Playwright."
+    },
+    "post.smzdm.com": {
+      "failure_type": "empty_content",
+      "retryable": true,
+      "suggested_next": "retry_playwright",
+      "note": "HTTP 202 with JS challenge page (209B). WAF probe needs JS execution."
+    }
+  }
+}
