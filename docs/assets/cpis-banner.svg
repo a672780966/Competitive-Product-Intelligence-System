@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
+  <defs>
+    <linearGradient id="bannerBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A1628"/>
+      <stop offset="100%" stop-color="#152238"/>
+    </linearGradient>
+    <linearGradient id="bannerAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1A73E8"/>
+      <stop offset="100%" stop-color="#00BCD4"/>
+    </linearGradient>
+    <linearGradient id="bannerGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A73E8" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#00BCD4" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="200" fill="url(#bannerBg)" rx="8"/>
+  <line x1="0" y1="50" x2="800" y2="50" stroke="#1A2A4A" stroke-width="0.5"/>
+  <line x1="0" y1="100" x2="800" y2="100" stroke="#1A2A4A" stroke-width="0.5"/>
+  <line x1="0" y1="150" x2="800" y2="150" stroke="#1A2A4A" stroke-width="0.5"/>
+  <path d="M 0,185 Q 200,165 400,185 T 800,185" fill="none" stroke="url(#bannerGlow)" stroke-width="1"/>
+  <path d="M 0,175 Q 150,195 350,175 T 800,175" fill="none" stroke="#1A73E8" stroke-width="0.5" opacity="0.25"/>
+  <polygon points="50,100 65,108 65,124 50,132 35,124 35,108" fill="none" stroke="url(#bannerAccent)" stroke-width="2"/>
+  <circle cx="50" cy="116" r="3" fill="url(#bannerAccent)"/>
+  <text x="85" y="78" font-family="Arial,Helvetica,sans-serif" font-size="36" font-weight="bold" fill="#FFFFFF">CPIS V1</text>
+  <text x="85" y="112" font-family="Arial,Helvetica,sans-serif" font-size="16" fill="#D0D8E0">企业 AI 竞品情报平台</text>
+  <text x="85" y="136" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#7A8A9A">AI-Powered Competitive Product Intelligence Platform</text>
+  <rect x="85" y="150" width="630" height="28" rx="14" fill="#1A2A4A" opacity="0.8"/>
+  <text x="100" y="168" font-family="Arial,Helvetica,sans-serif" font-size="11" fill="#7AACDD">
+    Discovery · Collection · Analysis · Feishu · MCP
+  </text>
+</svg>

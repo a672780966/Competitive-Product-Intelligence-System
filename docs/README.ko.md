@@ -3,9 +3,11 @@
 ---
 
 <p align="center">
-  <b>CPIS V1</b><br>
-  <b>엔터프라이즈 AI 경쟁사 제품 인텔리전스 플랫폼</b><br>
-  <i>AI-Powered Competitive Product Intelligence Platform</i>
+  <img src="assets/cpis-logo.svg" alt="CPIS Logo" width="400">
+</p>
+
+<p align="center">
+  <img src="assets/cpis-banner.svg" alt="CPIS V1 Banner" width="800">
 </p>
 
 <p align="center">

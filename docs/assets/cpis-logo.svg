@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 60" width="220" height="60">
+  <defs>
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A73E8"/>
+      <stop offset="100%" stop-color="#00BCD4"/>
+    </linearGradient>
+  </defs>
+  <polygon points="25,5 45,15 45,35 25,45 5,35 5,15" fill="none" stroke="url(#logoGrad)" stroke-width="2.5"/>
+  <polygon points="25,12 38,18 38,30 25,36 12,30 12,18" fill="url(#logoGrad)" opacity="0.12"/>
+  <circle cx="25" cy="24" r="4" fill="url(#logoGrad)"/>
+  <circle cx="12" cy="18" r="2" fill="#00BCD4"/>
+  <circle cx="38" cy="18" r="2" fill="#00BCD4"/>
+  <circle cx="12" cy="30" r="2" fill="#00BCD4"/>
+  <circle cx="38" cy="30" r="2" fill="#00BCD4"/>
+  <text x="58" y="30" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="bold" fill="#0F1B2D">
+    <tspan fill="url(#logoGrad)">C</tspan>P<tspan fill="url(#logoGrad)">I</tspan>S
+  </text>
+  <text x="58" y="46" font-family="Arial,Helvetica,sans-serif" font-size="9" fill="#667788" letter-spacing="1.5">
+    INTELLIGENCE PLATFORM
+  </text>
+</svg>
