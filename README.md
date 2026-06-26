@@ -1,182 +1,242 @@
-# CPIS V1 — Competitive Product Intelligence System
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="">
+    <img alt="CPIS V1" src="" width="200">
+  </picture>
+</p>
 
-**竞品公开信息自动采集与分析系统**
+<h1 align="center">CPIS V1</h1>
+<p align="center">
+  <b>AI-Powered Competitive Product Intelligence Platform</b><br>
+  <i>Automatically collect, extract, and analyze competitive product information<br>
+  from public web sources — transforming raw data into structured, actionable insights.</i>
+</p>
 
-CPIS V1 is an internal enterprise system that automatically collects publicly available competitive product information, processes it through AI-powered structured extraction, stores it in a database, synchronizes with Feishu Bitable, and generates briefing reports. It replaces manual competitive intelligence workflows with a semi-automated, configurable pipeline.
+<p align="center">
+  <a href="https://github.com/a672780966/Competitive-Product-Intelligence-System/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT License">
+  </a>
+  <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white" alt="Python 3.12">
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React 19">
+  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 16">
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose">
+  <img src="https://img.shields.io/badge/MCP-Ready-000000" alt="MCP Ready">
+  <img src="https://img.shields.io/badge/Feishu-Sync-3370FF?logo=lark&logoColor=white" alt="Feishu Sync">
+</p>
 
-**Served teams:** Product Management, Sales, Marketing, R&D, Management
+---
+
+## Why CPIS
+
+Manual competitive intelligence is slow, inconsistent, and doesn't scale. CPIS replaces it with a structured, AI-assisted pipeline.
+
+| Before | After |
+|--------|-------|
+| Manual browsing and copy-paste | Natural language → structured data |
+| Scattered notes and spreadsheets | Centralized database with versioning |
+| One-off analysis with no repeatability | Declarative RunPlans and templates |
+| Hard-to-track competitive changes | Product diffs, changelogs, confidence scoring |
+
+**Key capabilities:**
+
+- **AI-Native Discovery** — SearchProvider + LLMProvider architecture discovers relevant sources from natural language queries, with risk assessment and source type classification
+- **Declarative Collection** — JSON RunPlans define what, where, and how to collect, with URL pattern resolution and collector routing
+- **Structured Extraction** — AI extraction pipeline converts unstructured HTML into normalized product data with confidence scoring and version tracking
+- **Enterprise Integration** — Feishu Bitable sync, human review workflows, usage dashboards, and MCP tool server
+
+---
+
+## Product Workflow
+
+```mermaid
+flowchart LR
+    A["🧠 Natural Language Request"] --> B["🔍 AI Source Discovery"]
+    B --> C["📋 Source Candidates"]
+    C --> D["👤 User Selection"]
+    D --> E["📄 CollectionTemplate / RunPlan"]
+    E --> F["🌐 Collector Runtime<br/>8 registries"]
+    F --> G["🧹 Cleaner / AI Extractor"]
+    G --> H["📊 ProductVersion / Review"]
+    H --> I["📡 Feishu Sync / Usage / Scheduler"]
+
+    style A fill:#4A90D9,color:#fff,stroke:none
+    style I fill:#34A853,color:#fff,stroke:none
+```
+
+---
+
+## Core Modules
+
+| Module | Description |
+|--------|-------------|
+| **AI Discovery** | SearchProvider + LLMProvider for intelligent source discovery from natural language. DuckDuckGo (default), Stub for testing, with reserved slots for OpenAI, Gemini, Claude, SerpAPI. |
+| **Candidate Selection** | Risk assessment (low/medium/high/blocked), source type classification (official/marketplace/news/review), ranking by desirability score. |
+| **RunPlan Engine** | Declarative JSON plans with URL list, pattern resolution, search, and sitemap source types. No dynamic code execution. Validated against Pydantic schema. |
+| **Collector Runtime** | 8-registry system: direct HTTP (default, always enabled), Playwright (feature-gated), and 5 reserved runtimes (Scrapling, Crawl4AI, RSS, PDF, API). Retry policies per runtime. Execution reports for every fetch. |
+| **AI Extraction** | ProductExtractor + ModelProvider pipeline converts cleaned HTML into structured Product, ProductVersion, and ProductEvidence records. Confidence threshold (0.7) for auto-approve. |
+| **Product Versioning** | Diff tracking between product versions, changelog generation, evidence-based extraction with source attribution. |
+| **Human Review** | Approval workflow with auto-approve, reject, and reopen. Multi-stage pipeline status tracking per task. |
+| **Feishu Bitable Sync** | Bidirectional sync with retry logic, status tracking, and record ID persistence. Manual and batch sync endpoints. |
 
 ---
 
 ## Architecture
 
+```mermaid
+graph TB
+    subgraph Frontend["Frontend (React 19 + TypeScript + Ant Design)"]
+        UI["Discovery / Templates / Scheduler / Tasks / Products / Usage / Review"]
+    end
+
+    subgraph API["API Layer (FastAPI)"]
+        DiscoveryAPI["/api/v1/discovery"]
+        TemplatesAPI["/api/v1/collection-templates"]
+        TasksAPI["/api/v1/collection-tasks/snapshots/events"]
+        ProductsAPI["/api/v1/products/versions/reviews"]
+        SyncAPI["/api/v1/sync-records"]
+        UsageAPI["/api/v1/usage"]
+    end
+
+    subgraph Providers["Provider Layer"]
+        direction LR
+        Search["SearchProvider<br/>DuckDuckGo, Stub<br/>OpenAI·Gemini·Claude·SerpAPI"]
+        LLM["LLMProvider<br/>Stub<br/>OpenAI·Gemini·Claude·DeepSeek·Qwen"]
+    end
+
+    subgraph Pipeline["Async Pipeline (Celery + Redis)"]
+        Collect["Collector Runtime<br/>direct_http · playwright<br/>scrapling · crawl4ai · rss · pdf · api"]
+        Clean["HTML Cleaner<br/>trafilatura + bs4"]
+        Extract["AI Extractor<br/>ProductExtractor"]
+    end
+
+    subgraph Storage["Persistence"]
+        DB[("PostgreSQL 16<br/>SQLAlchemy 2 + Alembic")]
+    end
+
+    subgraph Sync["Integrations"]
+        Feishu["Feishu Bitable Sync"]
+        MCP["MCP Tool Server<br/>7+ tools"]
+        Sched["Scheduled Collection<br/>Cron / Interval / Daily / Weekly"]
+    end
+
+    UI --> API
+    API --> Providers
+    API --> Pipeline
+    API --> Storage
+    Pipeline --> Storage
+    Storage --> Sync
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Frontend    │────▶│  FastAPI     │────▶│  PostgreSQL  │
-│  (React 19)  │     │  Backend     │     │  (Database)  │
-└──────────────┘     └──────┬───────┘     └──────────────┘
-                            │
-                    ┌───────┴────────┐
-                    │  Celery Workers │
-                    │  (Async Tasks)  │
-                    └───────┬────────┘
-                            │
-                    ┌───────┴────────┐
-                    │  Collectors    │
-                    │  · HTTP/HTML   │
-                    │  · Playwright  │
-                    │  · RSS         │
-                    │  · PDF         │
-                    │  · API         │
-                    └────────────────┘
-```
-
-**Data flow:** URL Input → Compliance Validation → Web Collection → Content Cleaning → AI Structured Extraction → Product Storage & Versioning → Human Review → Feishu Bitable Sync → Briefing Report Generation
-
-See [docs/](./docs/) for detailed architecture documents and phase evidence.
-
----
-
-## Features
-
-- **Configurable Collection Pipeline** — Define templates to collect data from competitive web pages via pluggable collector runtimes (HTTP/HTML, Playwright, RSS, PDF, API).
-- **AI-Powered Structured Extraction** — Leverages OpenAI-compatible LLMs (or stub mode for demos) to extract structured product data from raw HTML/text with confidence scoring.
-- **Product Versioning & Diffing** — Tracks changes between successive product snapshots with AI-generated changelogs and diff analysis.
-- **Feishu Bitable Integration** — Automatic synchronization of collected product data to Feishu Bitable for team-wide collaboration.
-- **Task Scheduler & Async Workers** — Celery-based async task processing for collection jobs with retry policy, execution reports, and monitoring.
-- **Dashboard & Usage Tracking** — Frontend dashboard with collection metrics, task execution reports, search history, and collector runtime distribution.
-- **One-Command Docker Deployment** — Single `docker compose up -d` to start PostgreSQL, Redis, FastAPI backend, Celery workers, and React frontend.
-- **MCP Support** — Model Context Protocol support for AI-assisted discovery and template management.
 
 ---
 
 ## Quick Start
 
-Get CPIS V1 running locally in under 5 minutes. See the full [Quick Start Guide](release/QUICK_START.md) for detailed instructions.
+**Prerequisites:** Docker, Docker Compose, Git.
 
 ```bash
-# Prerequisites: Docker, Docker Compose, Git
-
-# 1. Clone & configure
-git clone <repository-url>
+# 1. Clone and configure
+git clone https://github.com/a672780966/Competitive-Product-Intelligence-System.git
 cd Competitive-Product-Intelligence-System
 cp .env.example .env
-# Edit .env as needed (DB_PASSWORD, LLM_API_KEY, etc.)
+# (edit DB_PASSWORD in .env or use the default)
 
 # 2. Start all services
-docker compose up -d
+docker compose -f docker-compose.demo.yml up -d
 
-# 3. Verify health
-curl http://localhost:8000/health/live
-
-# 4. Seed demo data (optional, recommended)
-docker compose exec backend python scripts/seed_demo.py
-
-# 5. Open the frontend
-# → http://localhost:5173 (dev mode)
-# → http://localhost:8080  (demo mode via docker-compose.demo.yml)
-
-# 6. Stop
-docker compose down
+# 3. Seed demo data
+docker compose -f docker-compose.demo.yml exec backend python /app/scripts/seed_demo.py
 ```
 
-The default `LLM_PROVIDER=stub` works out of the box without any API key — ideal for UI demos and pipeline testing.
+**Open** [http://localhost:8000/docs](http://localhost:8000/docs) for the API documentation, or [http://localhost:8080](http://localhost:8080) for the frontend UI.
+
+See **[QUICK_START.md](release/QUICK_START.md)** for detailed setup and **[DEMO_SCRIPT.md](release/DEMO_SCRIPT.md)** for a guided walkthrough.
 
 ---
 
 ## Demo
 
-A complete walkthrough script for presenters is available at [release/DEMO_SCRIPT.md](release/DEMO_SCRIPT.md). The demo covers:
-
-- **Step 1:** Start the system via Docker Compose
-- **Step 2:** Seed demo data (sample products, templates, usage history)
-- **Step 3:** Browse products, version history, and AI-generated changelogs
-- **Step 4:** Run a collection template and monitor task execution
-- **Step 5:** Check the usage dashboard with metrics and search history
-- **Optional:** Feishu sync and MCP tool integration
-
-**One-command demo start:**
+The demo seed script creates 3 sample products, a discovery session, and a collection template — all accessible from the UI on first load.
 
 ```bash
-./scripts/start_demo.sh
+docker compose exec backend python /app/scripts/seed_demo.py
 ```
 
-This starts all services using `docker-compose.demo.yml`, waits for the backend to be healthy, seeds demo data, and opens the frontend at [http://localhost:8080](http://localhost:8080).
+After seeding, browse:
+- **Products** — 3 products with version history
+- **Usage Dashboard** — daily stats for searches, collections, and extractions
+- **Collection Templates** — pre-configured RunPlan template
+- **Discovery** — sample discovery session with candidates
+
+---
+
+## MCP Integration
+
+CPIS exposes an MCP (Model Context Protocol) server, enabling AI assistants and MCP-compatible tools to interact with the platform programmatically.
+
+**Available tools:**
+
+| Tool | Description |
+|------|-------------|
+| `search_discovery` | Discover sources from natural language query |
+| `get_candidates` | List candidates for a discovery session |
+| `create_run_plan` | Create and execute a collection RunPlan |
+| `list_products` | List products with filters |
+| `get_task_status` | Check task pipeline status |
+| `list_templates` | List collection templates |
+| `get_usage_summary` | Get usage statistics |
+
+Start the MCP server: `python backend/mcp_server.py`
+
+---
+
+## OpenClaw Evidence Bridge
+
+CPIS integrates with the OpenClaw agent framework via the `cpis-json-gate` plugin, which validates evidence JSON schemas before accepting data into the pipeline. This enables controlled, gated ingestion from external AI agents.
+
+The bridge is designed for three agent roles (Collector, Analyst, Curator) — the Collector agent evidence path is implemented; Analyst and Curator roles are planned for future releases.
+
+---
+
+## Feishu Bitable Sync
+
+CPIS integrates deeply with Feishu (Lark) Bitable for enterprise intelligence distribution:
+
+- **Bidirectional sync** — Product data flows from CPIS to Bitable and back
+- **Status tracking** — Every sync has a record with status, timestamps, and error messages
+- **Retry logic** — Failed syncs are retried with backoff
+- **Manual and batch modes** — Sync individual products or all pending versions
+
+Configure via environment variables: `FEISHU_APP_ID`, `FEISHU_APP_SECRET`, `FEISHU_BITABLE_TOKEN`.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend Framework** | FastAPI (Python 3.12) |
-| **ORM & Migrations** | SQLAlchemy 2 + Alembic |
-| **Database** | PostgreSQL 16 |
-| **Cache & Message Broker** | Redis 7 + Celery 5 |
-| **Data Collection** | httpx, BeautifulSoup4, lxml, trafilatura, Playwright |
-| **Frontend Framework** | React 19 + TypeScript + Vite |
-| **UI Component Library** | Ant Design 5 |
-| **State Management** | TanStack Query |
-| **Form Validation** | React Hook Form + Zod |
-| **Logging** | structlog |
-| **Quality** | pytest, Ruff, mypy |
-| **Infrastructure** | Docker Compose |
+| Category | Technologies |
+|----------|-------------|
+| **Backend** | Python 3.12, FastAPI, SQLAlchemy 2, Alembic, Pydantic v2 |
+| **Database** | PostgreSQL 16, Redis 7 |
+| **Async** | Celery 5 (Redis broker), asyncio |
+| **Collection** | httpx, Playwright, BeautifulSoup4, lxml, trafilatura |
+| **Frontend** | React 19, TypeScript, Vite, Ant Design 5, TanStack Query |
+| **Infrastructure** | Docker Compose, multi-stage Dockerfiles |
+| **AI Layer** | OpenAI-compatible LLM API, DuckDuckGo Search |
+| **Integrations** | Feishu Open API, MCP Protocol |
 
 ---
 
-## Project Structure
+## Roadmap
 
-```
-cpis-v1/
-├── backend/
-│   ├── app/
-│   │   ├── api/            # API routes
-│   │   ├── core/           # Configuration, logging, database
-│   │   ├── models/         # SQLAlchemy ORM models
-│   │   ├── schemas/        # Pydantic validation schemas
-│   │   ├── repositories/   # Data access layer
-│   │   ├── services/       # Business logic orchestration
-│   │   ├── collectors/     # Web collection runtimes (HTTP, Playwright, RSS, PDF, API)
-│   │   ├── cleaners/       # HTML→text, noise removal
-│   │   ├── extractors/     # AI-based structured extraction
-│   │   ├── analyzers/      # Diff/changelog analysis
-│   │   ├── integrations/   # Feishu Bitable sync
-│   │   ├── tasks/          # Celery async task definitions
-│   │   └── prompts/        # Versioned LLM system prompts
-│   ├── alembic/            # Database migrations
-│   ├── scripts/            # Utility scripts (seed_demo.py, etc.)
-│   └── tests/              # Backend test suite
-├── frontend/
-│   └── src/
-│       ├── api/            # API client calls
-│       ├── components/     # Shared UI components
-│       ├── features/       # Business feature modules
-│       ├── layouts/        # Page layouts
-│       ├── routes/         # Route definitions
-│       ├── stores/         # State management
-│       └── types/          # TypeScript type definitions
-├── scripts/                # Start/stop scripts for demo, backend, frontend, worker
-├── release/                # Release documentation (QUICK_START.md, DEMO_SCRIPT.md, DEPLOYMENT_GUIDE.md, CHANGELOG.md, LICENSE.md, RELEASE_NOTES.md)
-├── docs/                   # Phase execution plans and audit reports
-├── docker-compose.yml      # Full system composition
-├── docker-compose.demo.yml # Demo-optimized composition
-└── .env.example            # Environment variable template
-```
-
----
-
-## Development
-
-- **Backend:** `cd backend && poetry install && uvicorn app.main:app --reload`
-- **Frontend:** `cd frontend && npm install && npm run dev`
-- **Tests:** `cd backend && pytest`
-- **Lint:** `cd backend && ruff check . && mypy .`
-- **Migrations:** `cd backend && alembic upgrade head`
-
-See [docs/](./docs/) for detailed development node execution plans and phase evidence.
+- **Discovery Providers** — OpenAI Search, Gemini Search, Claude Search, SerpAPI
+- **LLM Providers** — OpenAI, Gemini, Claude, DeepSeek, Qwen extraction/classification
+- **Collector Runtime Expansion** — RSS feeds, PDF documents, REST API collectors, Scrapling, Crawl4AI
+- **Enterprise Workflow** — Approval roles, audit trails, scheduled intelligence briefs
+- **Product Intelligence** — Advanced diffing, competitor timelines, category-level comparison views
+- **Integrations** — Feishu automation triggers, MCP tool expansion, report export (PDF, Excel)
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See [release/LICENSE.md](release/LICENSE.md) for details.
+MIT License. See [LICENSE](release/LICENSE.md) for details.
