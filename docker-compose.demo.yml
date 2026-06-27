@@ -1,15 +1,23 @@
-version: "3.9"
-
 x-backend-defaults: &backend-defaults
-  build:
-    context: ./backend
+  image: cpis-backend:latest
   env_file:
     - .env
-  depends_on:
-    postgres:
-      condition: service_healthy
-    redis:
-      condition: service_healthy
+  environment:
+    PYTHONPATH: /app
+    # Database defaults (Docker service names) — override in .env if needed
+    DATABASE_URL: postgresql+asyncpg://cpis:cpis@postgres:5432/cpis
+    DB_PASSWORD: cpis
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+    CELERY_RESULT_BACKEND: redis://redis:6379/2
+    LLM_PROVIDER: stub
+    LLM_MODEL: gpt-4o
+    LLM_BASE_URL: ""
+    COLLECTION_TIMEOUT_SECONDS: "60"
+    COLLECTION_MAX_RETRIES: "3"
+    COLLECTOR_PLAYWRIGHT_ENABLED: "false"
+    COLLECTOR_SCRAPLING_ENABLED: "false"
+    COLLECTOR_CRAWL4AI_ENABLED: "false"
   restart: unless-stopped
   networks:
     - cpis-demo-net
@@ -37,8 +45,6 @@ services:
   # --- Redis ---
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -47,12 +53,30 @@ services:
     networks:
       - cpis-demo-net
 
+  # --- Alembic Migrations (run once on startup) ---
+  migrate:
+    <<: *backend-defaults
+    command: alembic upgrade head
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   # --- FastAPI Backend ---
   backend:
     <<: *backend-defaults
     ports:
       - "8000:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # --- Celery Worker ---
   celery-worker:
@@ -60,12 +84,17 @@ services:
     command: celery -A app.tasks.worker worker --loglevel=info
     deploy:
       replicas: 1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # --- Frontend ---
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: cpis-frontend:latest
     ports:
       - "8080:80"
     depends_on:

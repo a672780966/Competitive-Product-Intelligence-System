@@ -18,6 +18,7 @@ from app.models import CollectionTemplate
 from app.models.enums import CollectionTemplateStatus
 from app.schemas.run_plan import validate_run_plan
 from app.schemas.template_schedule import (
+    TemplateCreateRequest,
     TemplateListResponse,
     TemplateResponse,
     TemplateRunResponse,
@@ -165,6 +166,39 @@ class TemplateService:
             tasks_created=len(tasks),
             message=f"Template executed: {len(tasks)} tasks created",
         )
+
+    # ── Create ───────────────────────────────────────────────────
+
+    async def create_template(self, req: TemplateCreateRequest) -> TemplateResponse:
+        """Create a collection template from simple demo sources."""
+        urls = [src.url for src in req.sources]
+        source_plan = {"sources": [src.model_dump() for src in req.sources]}
+        run_plan = {
+            "version": "1.0",
+            "name": req.name,
+            "sources": [
+                {
+                    "type": "url_list",
+                    "urls": urls,
+                    "category_hint": req.topic or req.sources[0].category_hint,
+                }
+            ],
+        }
+        validate_run_plan(run_plan)
+        template = CollectionTemplate(
+            name=req.name,
+            description=req.description,
+            target_brand=req.target_brand,
+            topic=req.topic,
+            source_plan=source_plan,
+            run_plan=run_plan,
+            feishu_sync_enabled=req.feishu_sync_enabled,
+            status=CollectionTemplateStatus.ACTIVE.value,
+        )
+        self._db.add(template)
+        await self._db.flush()
+        await self._db.refresh(template)
+        return self._to_response(template)
 
     # ── Internal ─────────────────────────────────────────────────
 

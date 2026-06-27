@@ -12,6 +12,24 @@ from app.models.enums import CollectionTemplateStatus, ScheduleType
 # ── CollectionTemplate Schemas ───────────────────────────────────
 
 
+class TemplateSourceRequest(BaseModel):
+    """A single source URL for creating a template."""
+
+    url: str = Field(..., max_length=2048)
+    category_hint: str | None = Field(None, max_length=64)
+
+
+class TemplateCreateRequest(BaseModel):
+    """Request body for creating a collection template from demo sources."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = None
+    target_brand: str | None = Field(None, max_length=255)
+    topic: str | None = Field(None, max_length=255)
+    sources: list[TemplateSourceRequest] = Field(..., min_length=1)
+    feishu_sync_enabled: bool = False
+
+
 class TemplateUpdateRequest(BaseModel):
     """Request body for updating a collection template."""
 

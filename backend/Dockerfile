@@ -42,6 +42,9 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app /app
 COPY --from=builder /root/.cache/ms-playwright /root/.cache/ms-playwright
 
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 RUN useradd -m -u 1000 cpis && chown -R cpis:cpis /app
 USER cpis
 
@@ -49,5 +52,7 @@ EXPOSE 8000
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
   CMD python -c "import httpx; httpx.get('http://localhost:8000/health/live', timeout=5)" || exit 1
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

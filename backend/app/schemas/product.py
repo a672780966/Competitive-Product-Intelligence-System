@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class VersionSummaryResponse(BaseModel):
@@ -53,3 +53,14 @@ class PaginatedProductResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class ProductCreateRequest(BaseModel):
+    """Request body for creating a new product."""
+
+    name: str = Field(..., min_length=1, max_length=512)
+    brand: str | None = None
+    model: str | None = None
+    category: str | None = None
+    description: str | None = None
+    source_url: str | None = Field(None, max_length=2048)

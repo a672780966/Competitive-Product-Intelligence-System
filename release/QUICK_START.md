@@ -23,92 +23,83 @@ git --version
 
 ---
 
-## Setup
+## Quick Start (Recommended)
 
-### 1. Clone the repository
+### 1. Clone and enter the repository
 
 ```bash
 git clone <repository-url>
 cd Competitive-Product-Intelligence-System
 ```
 
-### 2. Configure environment variables
+### 2. Start everything with one command
 
 ```bash
-cp .env.example .env
+bash scripts/start_demo.sh
 ```
 
-Edit the `.env` file:
+This single command:
+- Creates `.env` from `.env.example` (if missing)
+- Starts all services (PostgreSQL, Redis, Backend, Celery Worker, Frontend)
+- Runs database migrations automatically
+- Seeds demo data (products, discovery sessions, collection templates)
+- Waits for the backend to be ready (up to 60 seconds)
 
-- **Required:** Set a strong password for the database:
-  ```bash
-  DB_PASSWORD=your-strong-password-here
-  ```
-- **Optional — AI features:** If you want real AI extraction (not stub), set:
-  ```bash
-  LLM_PROVIDER=openai
-  LLM_API_KEY=sk-your-api-key-here
-  LLM_MODEL=gpt-4o
-  ```
-- **Optional — Feishu integration:** Configure Feishu app credentials for syncing to Bitable.
+### 3. Access the frontend
 
-> **Note:** The default `LLM_PROVIDER=stub` works out of the box without any API key — it returns mock data suitable for testing the UI and pipeline flow.
+Open [http://localhost:8080](http://localhost:8080) in your browser.
 
-### 3. Start the system
-
-```bash
-docker compose up -d
-```
-
-This starts:
-- **PostgreSQL 16** — database
-- **Redis 7** — cache and Celery broker
-- **FastAPI backend** — API server (port 8000)
-- **React frontend** — web UI (port 5173)
-- **Celery worker** — async task processor
-
-### 4. Verify the system is running
+### 4. Verify everything is running
 
 ```bash
 curl http://localhost:8000/health/live
+# Expected: {"status":"ok"}
 ```
 
-Expected response:
-```json
-{"status":"ok"}
-```
+### 5. API Endpoints
 
-### 5. Check all services are up
-
-```bash
-docker compose ps
-```
-
-All services should show `Up` status.
-
-### 6. Seed demo data (optional but recommended)
-
-```bash
-docker compose exec backend python scripts/seed_demo.py
-```
-
-This populates the database with sample competitive products, collection templates, and usage history for exploration.
-
-### 7. Access the frontend
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+| Endpoint | Description |
+|----------|-------------|
+| `http://localhost:8000/` | API root |
+| `http://localhost:8000/docs` | API documentation (Swagger UI) |
+| `http://localhost:8000/api/v1/system/provider-status` | Provider configuration status |
 
 ---
 
 ## Stopping the System
 
 ```bash
-docker compose down
+bash scripts/stop_demo.sh
 ```
 
-To also remove volumes (destroy all data):
+To also remove all data (reset):
+
 ```bash
-docker compose down -v
+docker compose -f docker-compose.demo.yml down -v
+```
+
+---
+
+## Manual Step-by-Step (Alternative)
+
+If you prefer manual control:
+
+### 1. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+### 2. Start all services
+
+```bash
+docker compose -f docker-compose.demo.yml up -d
+```
+
+### 3. Seed demo data
+
+```bash
+docker compose -f docker-compose.demo.yml exec backend python /app/scripts/seed_demo.py
 ```
 
 ---
@@ -116,44 +107,28 @@ docker compose down -v
 ## Troubleshooting
 
 ### "port is already allocated"
-Stop the conflicting service on port 8000 or 5173, or change the port mapping in `docker-compose.yml`.
+Stop the conflicting service, or change port mappings in `docker-compose.demo.yml`.
 
-### Backend health check fails
-Check the backend logs:
+### Backend fails to start
+Check logs:
 ```bash
-docker compose logs backend
+docker compose -f docker-compose.demo.yml logs backend
 ```
 
-### Database connection errors
-Ensure the database has started fully (may take a few seconds):
+### Frontend shows blank page
+Ensure the backend is running and the API is accessible:
 ```bash
-docker compose logs postgres
-docker compose restart backend
-```
-
-### "No such service" when running seed
-Ensure all services are running:
-```bash
-docker compose up -d
-```
-
-### Cannot access frontend
-Check if the frontend container is running:
-```bash
-docker compose ps frontend
-docker compose logs frontend
+curl http://localhost:8000/health/live
 ```
 
 ### Celery tasks not executing
-Verify the Celery worker is connected:
+Check worker logs:
 ```bash
-docker compose logs celery_worker
+docker compose -f docker-compose.demo.yml logs celery-worker
 ```
 
 ### Reset everything
 ```bash
-docker compose down -v
-docker compose up -d
-# Re-run seed
-docker compose exec backend python scripts/seed_demo.py
+docker compose -f docker-compose.demo.yml down -v
+bash scripts/start_demo.sh
 ```

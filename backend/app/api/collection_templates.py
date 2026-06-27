@@ -1,6 +1,7 @@
 """Collection Template API routes.
 
 Endpoints:
+  POST   /api/v1/collection-templates         — Create template
   GET    /api/v1/collection-templates         — List templates
   GET    /api/v1/collection-templates/{id}    — Get template detail
   PATCH  /api/v1/collection-templates/{id}    — Update template
@@ -17,6 +18,7 @@ from app.core.database import get_db
 from app.core.logging import get_logger
 from app.models.enums import CollectionTemplateStatus
 from app.schemas.template_schedule import (
+    TemplateCreateRequest,
     TemplateListResponse,
     TemplateResponse,
     TemplateRunResponse,
@@ -44,6 +46,16 @@ async def list_templates(
         page=page,
         page_size=page_size,
     )
+
+
+@router.post("", response_model=TemplateResponse, status_code=status.HTTP_201_CREATED)
+async def create_template(
+    body: TemplateCreateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TemplateResponse:
+    """Create a collection template from simple demo sources."""
+    service = TemplateService(db)
+    return await service.create_template(body)
 
 
 @router.get("/{template_id}", response_model=TemplateResponse)

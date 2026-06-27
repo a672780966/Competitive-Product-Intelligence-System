@@ -5,7 +5,6 @@ OUTPUT="release/cpis-v1-local-demo.tar.gz"
 echo "Creating release package: $OUTPUT"
 tar czf "$OUTPUT" \
     --exclude=".env" \
-    --exclude=".env.*" \
     --exclude="backend/.venv" \
     --exclude="__pycache__" \
     --exclude="*.pyc" \
